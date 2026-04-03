@@ -148,7 +148,7 @@ function ChatTurnCard({ turn }: { turn: ChatTurn }) {
 
   return (
     <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
-      <div style={{ alignSelf: 'flex-end', maxWidth: '80%', padding: '12px 14px', borderRadius: 12, background: 'var(--accent-dim)', border: '1px solid rgba(88,166,255,0.25)' }}>
+      <div style={{ alignSelf: 'flex-end', maxWidth: '80%', padding: '12px 14px', borderRadius: 12, background: 'var(--accent-dim)', border: '1px solid var(--border-bright)' }}>
         <p style={{ fontSize: 11, fontFamily: 'var(--font-mono)', color: 'var(--accent)', textTransform: 'uppercase', letterSpacing: '0.06em', marginBottom: 6 }}>You</p>
         <p style={{ fontSize: 14, color: 'var(--text-primary)', lineHeight: 1.6, whiteSpace: 'pre-wrap' }}>{turn.goal}</p>
       </div>
@@ -371,7 +371,7 @@ function SessionContent() {
 
   return (
     <div style={{ height: '100vh', display: 'flex', flexDirection: 'column', overflow: 'hidden' }}>
-      <div style={{ padding: '14px 24px', borderBottom: '1px solid var(--border)', background: 'var(--bg-surface)', display: 'flex', alignItems: 'center', gap: 12 }}>
+      <div style={{ padding: '14px 112px 14px 24px', borderBottom: '1px solid var(--border)', background: 'var(--bg-surface)', display: 'flex', alignItems: 'center', gap: 12, boxShadow: 'var(--shadow-md)' }}>
         <button onClick={() => router.push('/')} style={{ background: 'none', border: 'none', cursor: 'pointer', color: 'var(--text-secondary)', fontSize: 13 }}>
           New workspace
         </button>
@@ -406,8 +406,8 @@ function SessionContent() {
             <div ref={bottomRef} />
           </div>
 
-          <div style={{ position: 'sticky', bottom: 0, padding: '16px 24px 22px', borderTop: '1px solid var(--border)', background: 'linear-gradient(180deg, rgba(22,27,34,0.92) 0%, rgba(13,17,23,0.98) 100%)', backdropFilter: 'blur(14px)' }}>
-            <div style={{ display: 'flex', gap: 10, alignItems: 'flex-end', padding: '10px 12px', borderRadius: 24, border: '1px solid var(--border)', background: 'rgba(33,38,45,0.9)', boxShadow: '0 16px 40px rgba(0,0,0,0.28)' }}>
+          <div style={{ position: 'sticky', bottom: 0, padding: '16px 24px 22px', borderTop: '1px solid var(--border)', background: 'var(--shell-gradient)', backdropFilter: 'blur(14px)' }}>
+            <div style={{ display: 'flex', gap: 10, alignItems: 'flex-end', padding: '10px 12px', borderRadius: 24, border: '1px solid var(--border)', background: 'var(--shell-bg)', boxShadow: 'var(--shadow-lg)' }}>
               <textarea
                 value={input}
                 onChange={event => setInput(event.target.value)}
@@ -425,11 +425,11 @@ function SessionContent() {
                   height: 42,
                   flexShrink: 0,
                   borderRadius: 14,
-                  border: '1px solid rgba(88,166,255,0.18)',
-                  background: status === 'running' ? 'rgba(88,166,255,0.08)' : 'linear-gradient(135deg, #79c0ff 0%, #58a6ff 55%, #3b82f6 100%)',
-                  color: status === 'running' ? 'var(--text-muted)' : '#07111f',
+                  border: '1px solid var(--border-bright)',
+                  background: status === 'running' ? 'var(--accent-dim)' : 'var(--accent)',
+                  color: status === 'running' ? 'var(--text-muted)' : 'var(--accent-contrast)',
                   cursor: status === 'running' ? 'default' : 'pointer',
-                  boxShadow: status === 'running' ? 'none' : '0 10px 24px rgba(88,166,255,0.28)',
+                  boxShadow: status === 'running' ? 'none' : 'var(--shadow-md)',
                   display: 'flex',
                   alignItems: 'center',
                   justifyContent: 'center',

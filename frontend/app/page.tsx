@@ -30,7 +30,7 @@ export default function Home() {
       {/* Header */}
       <div style={{ textAlign: 'center', marginBottom: 40 }}>
         <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 10, marginBottom: 12 }}>
-          <div style={{ width: 36, height: 36, borderRadius: 8, background: 'var(--accent-dim)', border: '1px solid rgba(88,166,255,0.3)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontFamily: 'var(--font-mono)', fontSize: 16, color: 'var(--accent)' }}>
+          <div style={{ width: 36, height: 36, borderRadius: 8, background: 'var(--accent-dim)', border: '1px solid var(--border-bright)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontFamily: 'var(--font-mono)', fontSize: 16, color: 'var(--accent)' }}>
             {'</>'}
           </div>
           <h1 style={{ fontFamily: 'var(--font-mono)', fontSize: 22, fontWeight: 500, letterSpacing: '-0.02em', color: 'var(--text-primary)' }}>
@@ -43,7 +43,7 @@ export default function Home() {
       </div>
 
       {/* Card */}
-      <div style={{ width: '100%', maxWidth: 600, background: 'var(--bg-surface)', border: '1px solid var(--border)', borderRadius: 12, padding: 28, display: 'flex', flexDirection: 'column', gap: 22 }}>
+      <div style={{ width: '100%', maxWidth: 600, background: 'var(--bg-surface)', border: '1px solid var(--border)', borderRadius: 18, padding: 28, display: 'flex', flexDirection: 'column', gap: 22, boxShadow: 'var(--shadow-lg)', backdropFilter: 'blur(10px)' }}>
 
         {/* Goal input */}
         <div>
@@ -61,7 +61,7 @@ export default function Home() {
               fontFamily: 'var(--font-sans)', fontSize: 14, resize: 'vertical',
               outline: 'none', lineHeight: 1.6,
             }}
-            onFocus={e => e.target.style.borderColor = 'rgba(88,166,255,0.5)'}
+            onFocus={e => e.target.style.borderColor = 'var(--accent)'}
             onBlur={e => e.target.style.borderColor = 'var(--border)'}
           />
           {/* Example chips */}
@@ -92,7 +92,7 @@ export default function Home() {
               borderRadius: 8, padding: '9px 12px', color: 'var(--text-primary)',
               fontFamily: 'var(--font-mono)', fontSize: 13, outline: 'none',
             }}
-            onFocus={e => e.target.style.borderColor = 'rgba(88,166,255,0.5)'}
+            onFocus={e => e.target.style.borderColor = 'var(--accent)'}
             onBlur={e => e.target.style.borderColor = 'var(--border)'}
           />
           <p style={{ fontSize: 11, color: 'var(--text-muted)', marginTop: 5 }}>
@@ -104,9 +104,10 @@ export default function Home() {
 
         <button onClick={start} style={{
           padding: '11px', borderRadius: 8, background: 'var(--accent)',
-          border: 'none', color: '#0d1117', fontFamily: 'var(--font-mono)',
+          border: 'none', color: 'var(--accent-contrast)', fontFamily: 'var(--font-mono)',
           fontSize: 13, fontWeight: 500, cursor: 'pointer',
           display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 8,
+          boxShadow: 'var(--shadow-md)',
         }}>
           <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5"><polygon points="5 3 19 12 5 21 5 3" /></svg>
           Open workspace
