@@ -10,6 +10,23 @@ class RunRequest(BaseModel):
     workspace: str = Field(..., min_length=1, description="Absolute path to the project directory")
 
 
+class CreateSessionRequest(BaseModel):
+    workspace: str = Field(..., min_length=1, description="Absolute path to the project directory")
+    mode: Literal["refactor", "test", "document"] = Field("refactor", description="Default agent operating mode")
+
+
+class SessionRunRequest(BaseModel):
+    goal: str = Field(..., min_length=1, max_length=2000, description="What the agent should do next")
+    mode: Literal["refactor", "test", "document"] | None = Field(None, description="Optional mode override for this message")
+
+
+class SessionResponse(BaseModel):
+    session_id: str
+    workspace: str
+    mode: Literal["refactor", "test", "document"]
+    busy: bool
+
+
 # ── Agent event schemas (streamed via SSE) ─────────────────────────
 
 class ThoughtEvent(BaseModel):

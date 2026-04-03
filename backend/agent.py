@@ -1,8 +1,13 @@
-import json, os
-from groq import Groq
-from tools import TOOL_SCHEMAS, TOOL_MAP, set_workspace
-from typing import AsyncGenerator
+import json
+import os
+import re
+from dataclasses import dataclass
+from typing import Any, AsyncGenerator
+
 from dotenv import load_dotenv
+from groq import Groq
+
+from tools import TOOL_MAP, TOOL_SCHEMAS, set_workspace
 
 load_dotenv()
 
@@ -10,140 +15,182 @@ client = Groq(api_key=os.getenv("GROQ_API_KEY"))
 MODEL = "llama-3.3-70b-versatile"
 MAX_ITERATIONS = 20
 
-MODE_PROMPTS = {
-    "refactor": """You are an expert software engineer performing code refactoring.
-Your job: analyse the codebase, identify improvements, and make targeted edits.
+BASE_SYSTEM_PROMPT = """You are RepoAgent, an expert software engineer working inside a local repository.
+You are in an ongoing conversation with the user about the same workspace, so keep context from earlier messages.
 
-Refactoring goals:
-- Improve readability and maintainability
-- Remove duplication (DRY principle)
-- Improve naming (variables, functions, classes)
-- Add type hints where missing (Python)
-- Simplify complex logic
-- Fix obvious bugs or anti-patterns
+General rules:
+- Use tools to inspect the repository before making changes
+- Read relevant files before writing them
+- Make focused edits instead of rewriting unrelated code
+- When you finish a request, explain what you changed or found
+- If the user asks for a follow-up, build on the existing conversation and prior edits"""
 
-Process:
-1. ALWAYS start with list_files to understand the project structure
-2. Read relevant files before modifying them
-3. Make focused, minimal changes — don't rewrite everything
-4. Write improved versions using write_file
-5. After writing, verify by reading the file back""",
-
-    "test": """You are an expert software engineer writing comprehensive tests.
-Your job: analyse existing code and write thorough test suites.
-
-Testing goals:
-- Cover happy paths, edge cases, and error conditions
-- Use pytest for Python, Jest for JavaScript/TypeScript
-- Write descriptive test names that explain what is being tested
-- Mock external dependencies appropriately
-- Aim for meaningful coverage, not just line coverage
-
-Process:
-1. ALWAYS start with list_files to understand the project structure
-2. Read the source files you'll be testing
-3. Identify all functions/classes/methods to test
-4. Write test files (e.g. test_<module>.py or <module>.test.ts)
-5. Run pytest or similar to verify tests pass (use run_command)""",
-
-    "document": """You are an expert technical writer creating code documentation.
-Your job: analyse the codebase and add clear, useful documentation.
-
-Documentation goals:
-- Add docstrings to all functions and classes
-- Update or create README.md
-- Document parameters, return values, and exceptions
-- Add inline comments for complex logic
-- Keep docs concise — avoid obvious comments
-
-Process:
-1. ALWAYS start with list_files to understand the project structure
-2. Read each file to understand what it does
-3. Add docstrings and comments using write_file
-4. Update README.md with project overview, setup, and usage"""
+MODE_GUIDANCE = {
+    "refactor": """Focus on improving code quality, maintainability, naming, duplication, and obvious bugs.""",
+    "test": """Focus on adding or improving tests, covering edge cases, and validating behavior.""",
+    "document": """Focus on README files, docstrings, comments, and other developer documentation.""",
 }
 
-def _run_tool(name: str, args: dict) -> str:
+
+@dataclass
+class PendingToolCall:
+    id: str
+    name: str
+    arguments: str
+
+
+def _run_tool(name: str, args: dict[str, Any]) -> str:
     fn = TOOL_MAP.get(name)
     if not fn:
         return json.dumps({"error": f"Unknown tool: {name}"})
     result = fn(**args)
     return json.dumps(result, indent=2)
 
+
+def _format_user_message(goal: str, mode: str, workspace: str) -> str:
+    guidance = MODE_GUIDANCE.get(mode, MODE_GUIDANCE["refactor"])
+    return (
+        f"Workspace: {workspace}\n"
+        f"Current mode: {mode}\n"
+        f"Mode guidance: {guidance}\n\n"
+        f"User request:\n{goal}"
+    )
+
+
+def _extract_failed_generation(error: Exception) -> str | None:
+    if hasattr(error, "body") and isinstance(error.body, dict):
+        failed_generation = error.body.get("error", {}).get("failed_generation")
+        if isinstance(failed_generation, str) and failed_generation.strip():
+            return failed_generation
+
+    text = str(error)
+    match = re.search(r"'failed_generation':\s*'(.+?)'\s*}", text, re.DOTALL)
+    if not match:
+        return None
+
+    return match.group(1).encode("utf-8").decode("unicode_escape")
+
+
+def _parse_failed_tool_calls(error: Exception, iteration: int) -> list[PendingToolCall]:
+    failed_generation = _extract_failed_generation(error)
+    if not failed_generation:
+        return []
+
+    tool_calls: list[PendingToolCall] = []
+    pattern = re.compile(r"<function=(?P<name>[a-zA-Z_][\w-]*)\s+(?P<args>\{.*?\})</function>", re.DOTALL)
+
+    for index, match in enumerate(pattern.finditer(failed_generation), start=1):
+        args_text = match.group("args").strip()
+        try:
+            json.loads(args_text)
+        except json.JSONDecodeError:
+            continue
+
+        tool_calls.append(
+            PendingToolCall(
+                id=f"recovered-tool-{iteration}-{index}",
+                name=match.group("name"),
+                arguments=args_text,
+            )
+        )
+
+    return tool_calls
+
+
 async def run_agent(
     goal: str,
     mode: str,
     workspace: str,
-) -> AsyncGenerator[dict, None]:
+    conversation_messages: list[dict[str, Any]],
+) -> AsyncGenerator[dict[str, Any], None]:
     """
-    Core agentic loop. Yields event dicts for SSE streaming.
-    Event types: thought | tool_call | tool_result | file_changed | done | error
+    Core agentic loop. Mutates conversation_messages so later requests can
+    continue the same chat session.
     """
     set_workspace(workspace)
 
-    system_prompt = MODE_PROMPTS.get(mode, MODE_PROMPTS["refactor"])
-    messages = [
-        {"role": "system", "content": system_prompt},
-        {"role": "user", "content": f"Goal: {goal}\n\nWorkspace: {workspace}\n\nPlease begin."}
-    ]
+    user_message = {"role": "user", "content": _format_user_message(goal, mode, workspace)}
+    conversation_messages.append(user_message)
 
-    changed_files: list[dict] = []
+    changed_files: list[dict[str, Any]] = []
     iteration = 0
 
-    yield {"type": "thought", "content": f"Starting {mode} agent for goal: {goal}"}
+    yield {"type": "thought", "content": f"Working on: {goal}"}
 
     while iteration < MAX_ITERATIONS:
         iteration += 1
+        model_messages = [{"role": "system", "content": BASE_SYSTEM_PROMPT}, *conversation_messages]
+        recovered_tool_calls: list[PendingToolCall] = []
+        assistant_content = ""
 
         try:
             response = client.chat.completions.create(
                 model=MODEL,
-                messages=messages,
+                messages=model_messages,
                 tools=TOOL_SCHEMAS,
                 tool_choice="auto",
                 max_tokens=4096,
                 temperature=0.2,
             )
+            msg = response.choices[0].message
+            finish_reason = response.choices[0].finish_reason
+            structured_tool_calls = [
+                PendingToolCall(
+                    id=tc.id,
+                    name=tc.function.name,
+                    arguments=tc.function.arguments,
+                )
+                for tc in (msg.tool_calls or [])
+            ]
+            assistant_content = msg.content or ""
         except Exception as e:
-            yield {"type": "error", "content": str(e)}
-            return
+            recovered_tool_calls = _parse_failed_tool_calls(e, iteration)
+            if not recovered_tool_calls:
+                yield {"type": "error", "content": str(e)}
+                return
+            finish_reason = "tool_calls"
+            structured_tool_calls = recovered_tool_calls
+            assistant_content = ""
+            yield {
+                "type": "thought",
+                "content": "Recovered a malformed tool call from the model and continued automatically.",
+            }
 
-        msg = response.choices[0].message
-        finish_reason = response.choices[0].finish_reason
+        if assistant_content:
+            yield {"type": "thought", "content": assistant_content}
 
-        # Emit any text the model produced
-        if msg.content:
-            yield {"type": "thought", "content": msg.content}
-
-        # No tool calls → agent is done
-        if finish_reason == "stop" or not msg.tool_calls:
+        if finish_reason == "stop" or not structured_tool_calls:
+            if assistant_content:
+                conversation_messages.append({"role": "assistant", "content": assistant_content})
             yield {
                 "type": "done",
-                "content": msg.content or "Task complete.",
+                "content": assistant_content or "Task complete.",
                 "changed_files": changed_files,
-                "iterations": iteration
+                "iterations": iteration,
             }
             return
 
-        # Append assistant message with tool calls
-        messages.append({
+        assistant_message = {
             "role": "assistant",
-            "content": msg.content or "",
+            "content": assistant_content,
             "tool_calls": [
                 {
                     "id": tc.id,
                     "type": "function",
-                    "function": {"name": tc.function.name, "arguments": tc.function.arguments}
+                    "function": {
+                        "name": tc.name,
+                        "arguments": tc.arguments,
+                    },
                 }
-                for tc in msg.tool_calls
-            ]
-        })
+                for tc in structured_tool_calls
+            ],
+        }
+        conversation_messages.append(assistant_message)
 
-        # Execute each tool call
-        for tc in msg.tool_calls:
-            tool_name = tc.function.name
+        for tc in structured_tool_calls:
+            tool_name = tc.name
             try:
-                args = json.loads(tc.function.arguments)
+                args = json.loads(tc.arguments)
             except json.JSONDecodeError:
                 args = {}
 
@@ -152,7 +199,6 @@ async def run_agent(
             result_str = _run_tool(tool_name, args)
             result_data = json.loads(result_str)
 
-            # Track file changes for diff view
             if tool_name == "write_file" and result_data.get("success"):
                 change = {
                     "path": result_data["path"],
@@ -164,16 +210,19 @@ async def run_agent(
 
             yield {"type": "tool_result", "tool": tool_name, "result": result_data}
 
-            # Add tool result to messages
-            messages.append({
-                "role": "tool",
-                "tool_call_id": tc.id,
-                "content": result_str
-            })
+            conversation_messages.append(
+                {
+                    "role": "tool",
+                    "tool_call_id": tc.id,
+                    "content": result_str,
+                }
+            )
 
+    final_message = f"Reached max iterations ({MAX_ITERATIONS}). Stopping."
+    conversation_messages.append({"role": "assistant", "content": final_message})
     yield {
         "type": "done",
-        "content": f"Reached max iterations ({MAX_ITERATIONS}). Stopping.",
+        "content": final_message,
         "changed_files": changed_files,
-        "iterations": iteration
+        "iterations": iteration,
     }

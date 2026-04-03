@@ -2,32 +2,25 @@
 import { useState } from 'react'
 import { useRouter } from 'next/navigation'
 
-const MODES = [
-  { id: 'refactor', label: 'Refactor', desc: 'Improve code quality, naming, and structure', icon: '⟳' },
-  { id: 'test', label: 'Write tests', desc: 'Generate comprehensive test suites', icon: '✓' },
-  { id: 'document', label: 'Document', desc: 'Add docstrings, comments, and README', icon: '≡' },
-]
-
 const EXAMPLES = [
+  'Can you write me a README?',
   'Add type hints to all functions and improve variable naming',
   'Write pytest tests for all public functions with edge cases',
   'Add docstrings to every function and update the README',
-  'Refactor duplicate code into reusable helper functions',
-  'Convert synchronous functions to async where appropriate',
+  'Explain the project structure and how the main pieces fit together',
 ]
 
 export default function Home() {
   const router = useRouter()
-  const [mode, setMode] = useState('refactor')
   const [goal, setGoal] = useState('')
   const [workspace, setWorkspace] = useState('')
   const [error, setError] = useState('')
 
   function start() {
-    if (!goal.trim()) { setError('Please describe what you want the agent to do'); return }
     if (!workspace.trim()) { setError('Please enter the path to your project'); return }
     setError('')
-    const params = new URLSearchParams({ goal: goal.trim(), mode, workspace: workspace.trim() })
+    const params = new URLSearchParams({ workspace: workspace.trim() })
+    if (goal.trim()) params.set('goal', goal.trim())
     router.push(`/session?${params}`)
   }
 
@@ -52,35 +45,15 @@ export default function Home() {
       {/* Card */}
       <div style={{ width: '100%', maxWidth: 600, background: 'var(--bg-surface)', border: '1px solid var(--border)', borderRadius: 12, padding: 28, display: 'flex', flexDirection: 'column', gap: 22 }}>
 
-        {/* Mode selector */}
-        <div>
-          <label style={{ fontSize: 12, color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.06em', display: 'block', marginBottom: 10 }}>
-            Mode
-          </label>
-          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: 8 }}>
-            {MODES.map(m => (
-              <button key={m.id} onClick={() => setMode(m.id)} style={{
-                padding: '10px 12px', borderRadius: 8, textAlign: 'left',
-                background: mode === m.id ? 'var(--accent-dim)' : 'var(--bg-raised)',
-                border: `1px solid ${mode === m.id ? 'rgba(88,166,255,0.4)' : 'var(--border)'}`,
-                cursor: 'pointer', transition: 'all 0.15s',
-              }}>
-                <div style={{ fontSize: 11, fontFamily: 'var(--font-mono)', color: mode === m.id ? 'var(--accent)' : 'var(--text-muted)', marginBottom: 3 }}>{m.label}</div>
-                <div style={{ fontSize: 11, color: 'var(--text-secondary)', lineHeight: 1.4 }}>{m.desc}</div>
-              </button>
-            ))}
-          </div>
-        </div>
-
         {/* Goal input */}
         <div>
           <label style={{ fontSize: 12, color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.06em', display: 'block', marginBottom: 8 }}>
-            Goal
+            First message
           </label>
           <textarea
             value={goal}
             onChange={e => setGoal(e.target.value)}
-            placeholder="Describe what you want the agent to do..."
+            placeholder="Optional: ask for a README, refactor, tests, docs..."
             rows={3}
             style={{
               width: '100%', background: 'var(--bg-raised)', border: '1px solid var(--border)',
@@ -93,11 +66,7 @@ export default function Home() {
           />
           {/* Example chips */}
           <div style={{ marginTop: 8, display: 'flex', gap: 6, flexWrap: 'wrap' }}>
-            {EXAMPLES.filter((_, i) => {
-              if (mode === 'refactor') return i === 0 || i === 3 || i === 4
-              if (mode === 'test') return i === 1
-              return i === 2
-            }).map(ex => (
+            {EXAMPLES.map(ex => (
               <button key={ex} onClick={() => setGoal(ex)} style={{
                 fontSize: 11, padding: '3px 10px', borderRadius: 20,
                 background: 'var(--bg-raised)', border: '1px solid var(--border)',
@@ -140,7 +109,7 @@ export default function Home() {
           display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 8,
         }}>
           <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5"><polygon points="5 3 19 12 5 21 5 3" /></svg>
-          Run agent
+          Open workspace
         </button>
       </div>
 
