@@ -5,7 +5,9 @@
 venv/
 __pycache__/
 *.pyc
+.pytest_cache/
 backend/.env
+backend/repoagent.db
 
 # Node / Next
 node_modules/
