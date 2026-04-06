@@ -130,7 +130,9 @@ def _classify_intent(goal: str, requested_mode: str | None) -> str:
     tokens = set(re.findall(r"\b[a-z0-9']+\b", normalized))
     if _is_small_talk(goal):
         return "small_talk"
-    if normalized in {"thanks", "thank you", "ok", "okay", "cool", "nice"}:
+    if normalized in {"thanks", "thank you", "thx", "ty"}:
+        return "gratitude"
+    if normalized in {"ok", "okay", "cool", "nice"}:
         return "small_talk"
     if normalized in AMBIGUOUS_PATTERNS:
         return "clarify"
@@ -145,6 +147,10 @@ def _small_talk_response(workspace: str) -> str:
         "You can ask me to inspect the codebase, explain the architecture, write a README, "
         "modify files, or add tests. Tell me what you want to work on and I'll jump in."
     )
+
+
+def _gratitude_response() -> str:
+    return "You're welcome. If you want, I can help with another change or explain anything in the repo."
 
 
 def _clarifying_question(goal: str, workspace: str) -> str:
@@ -562,6 +568,21 @@ async def run_agent(
 
     if intent == "small_talk":
         final_content = _small_talk_response(workspace)
+        conversation_messages.append({"role": "user", "content": goal})
+        conversation_messages.append({"role": "assistant", "content": final_content})
+        _append_summary(goal, "analyze", [], final_content, turn_summaries)
+        _append_turn_history(session_state, goal, final_content, [], 0)
+        yield {"type": "thought", "content": final_content}
+        yield {
+            "type": "done",
+            "content": final_content,
+            "changed_files": [],
+            "iterations": 0,
+        }
+        return
+
+    if intent == "gratitude":
+        final_content = _gratitude_response()
         conversation_messages.append({"role": "user", "content": goal})
         conversation_messages.append({"role": "assistant", "content": final_content})
         _append_summary(goal, "analyze", [], final_content, turn_summaries)

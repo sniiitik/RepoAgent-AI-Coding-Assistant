@@ -262,13 +262,13 @@ export default function Home() {
 
   return (
     <div style={{ minHeight: '100vh', padding: isMobile ? '24px 14px 40px' : '36px 24px 56px' }}>
-      <div style={{ width: '100%', maxWidth: 980, margin: '0 auto' }}>
+      <div style={{ width: '100%', maxWidth: 920, margin: '0 auto' }}>
         <div
           style={{
             border: '1px solid var(--border)',
-            borderRadius: 18,
+            borderRadius: 16,
             background: 'var(--bg-surface)',
-            boxShadow: 'var(--shadow-lg)',
+            boxShadow: 'var(--shadow-md)',
             overflow: 'hidden',
           }}
         >
@@ -281,113 +281,96 @@ export default function Home() {
             </span>
           </div>
 
-          <div style={{ display: 'grid', gridTemplateColumns: isMobile ? '1fr' : 'minmax(0, 1.05fr) minmax(360px, 0.95fr)' }}>
-            <div style={{ padding: isMobile ? '20px 18px' : '28px 26px', borderRight: isMobile ? 'none' : '1px solid var(--border)' }}>
-              <p style={{ fontSize: 12, color: 'var(--accent)', fontFamily: 'var(--font-mono)', textTransform: 'uppercase', letterSpacing: '0.08em' }}>
+          <div style={{ padding: isMobile ? '22px 16px 18px' : '28px 28px 24px' }}>
+            <p style={{ fontSize: 12, color: 'var(--accent)', fontFamily: 'var(--font-mono)', textTransform: 'uppercase', letterSpacing: '0.08em' }}>
                 $ repoagent start
-              </p>
-              <h1 style={{ marginTop: 18, fontSize: isMobile ? 32 : 48, lineHeight: 1.02, letterSpacing: '-0.05em', color: 'var(--text-primary)', fontWeight: 500 }}>
-                a terminal for talking to your codebase.
-              </h1>
-              <p style={{ marginTop: 16, fontSize: 15, color: 'var(--text-primary)', opacity: 0.72, lineHeight: 1.8, maxWidth: 560 }}>
-                Open a local project, ask what the repo does, request changes, review approvals, and keep working in the same session without losing context.
-              </p>
+            </p>
+            <h1 style={{ marginTop: 16, fontSize: isMobile ? 32 : 44, lineHeight: 1.04, letterSpacing: '-0.05em', color: 'var(--text-primary)', fontWeight: 500, maxWidth: 620 }}>
+              talk to your codebase.
+            </h1>
+            <p style={{ marginTop: 12, fontSize: 14, color: 'var(--text-secondary)', lineHeight: 1.8, maxWidth: 620 }}>
+              Open a local repo, ask what it does, request a change, and keep the same session alive.
+            </p>
 
-              <div style={{ marginTop: 22, display: 'grid', gap: 10 }}>
-                <div style={{ padding: '11px 12px', borderRadius: 12, border: '1px solid var(--border)', background: 'var(--bg-raised)' }}>
-                  <p style={{ fontSize: 11, color: 'var(--text-muted)', fontFamily: 'var(--font-mono)' }}>capabilities</p>
-                  <p style={{ marginTop: 7, fontSize: 13, color: 'var(--text-primary)', opacity: 0.68, lineHeight: 1.7 }}>
-                    explain architecture • draft docs • edit files with approval • inspect git state • continue long-running repo chats
-                  </p>
-                </div>
-                <div style={{ padding: '11px 12px', borderRadius: 12, border: '1px solid var(--border)', background: 'var(--bg-raised)' }}>
-                  <p style={{ fontSize: 11, color: 'var(--text-muted)', fontFamily: 'var(--font-mono)' }}>sample prompts</p>
-                  <div style={{ marginTop: 8, display: 'flex', flexWrap: 'wrap', gap: 8 }}>
-                    {EXAMPLES.map(example => (
-                      <button
-                        key={example}
-                        onClick={() => setGoal(example)}
-                        style={{ border: '1px solid var(--border)', background: 'var(--bg-surface)', color: 'var(--text-secondary)', borderRadius: 999, padding: '7px 10px', cursor: 'pointer', fontSize: 11, fontFamily: 'var(--font-mono)', opacity: 0.9 }}
-                      >
-                        {example}
-                      </button>
-                    ))}
-                  </div>
-                </div>
+            <div style={{ marginTop: 22, display: 'grid', gap: 14 }}>
+              <div>
+                <label style={{ display: 'block', marginBottom: 8, fontSize: 11, color: 'var(--text-muted)', fontFamily: 'var(--font-mono)', textTransform: 'uppercase', letterSpacing: '0.08em' }}>
+                  project path
+                </label>
+                <input
+                  value={workspace}
+                  onChange={event => setWorkspace(event.target.value)}
+                  placeholder="/Users/you/projects/my-app"
+                  style={{
+                    width: '100%',
+                    border: '1px solid var(--border)',
+                    borderRadius: 12,
+                    background: 'var(--bg-raised)',
+                    color: 'var(--text-primary)',
+                    padding: '11px 12px',
+                    fontSize: 13,
+                    outline: 'none',
+                    fontFamily: 'var(--font-mono)',
+                  }}
+                />
               </div>
-            </div>
 
-            <div style={{ padding: isMobile ? '18px 18px' : '26px 22px' }}>
-              <p style={{ fontSize: 12, color: 'var(--text-muted)', fontFamily: 'var(--font-mono)', textTransform: 'uppercase', letterSpacing: '0.08em' }}>
-                session bootstrap
-              </p>
+              <div>
+                <label style={{ display: 'block', marginBottom: 8, fontSize: 11, color: 'var(--text-muted)', fontFamily: 'var(--font-mono)', textTransform: 'uppercase', letterSpacing: '0.08em' }}>
+                  first message
+                </label>
+                <textarea
+                  value={goal}
+                  onChange={event => setGoal(event.target.value)}
+                  placeholder="optional: explain the architecture, write a README, add tests..."
+                  rows={3}
+                  style={{
+                    width: '100%',
+                    border: '1px solid var(--border)',
+                    borderRadius: 12,
+                    background: 'var(--bg-raised)',
+                    color: 'var(--text-primary)',
+                    padding: '12px 13px',
+                    fontSize: 14,
+                    lineHeight: 1.6,
+                    outline: 'none',
+                    resize: 'vertical',
+                    fontFamily: 'var(--font-sans)',
+                  }}
+                />
+              </div>
 
-              <div style={{ marginTop: 16, display: 'grid', gap: 16 }}>
-                <div>
-                  <label style={{ display: 'block', marginBottom: 8, fontSize: 11, color: 'var(--text-muted)', fontFamily: 'var(--font-mono)', textTransform: 'uppercase', letterSpacing: '0.08em' }}>
-                    first message
-                  </label>
-                  <textarea
-                    value={goal}
-                    onChange={event => setGoal(event.target.value)}
-                    placeholder="optional: explain the architecture, write a README, add tests..."
-                    rows={4}
-                    style={{
-                      width: '100%',
-                      border: '1px solid var(--border)',
-                      borderRadius: 12,
-                      background: 'var(--bg-raised)',
-                      color: 'var(--text-primary)',
-                      padding: '12px 13px',
-                      fontSize: 14,
-                      lineHeight: 1.6,
-                      outline: 'none',
-                      resize: 'vertical',
-                      fontFamily: 'var(--font-sans)',
-                    }}
-                  />
+              <div style={{ display: 'flex', flexWrap: 'wrap', gap: 8 }}>
+                {EXAMPLES.map(example => (
+                  <button
+                    key={example}
+                    onClick={() => setGoal(example)}
+                    style={{ border: '1px solid var(--border)', background: 'transparent', color: 'var(--text-secondary)', borderRadius: 999, padding: '6px 10px', cursor: 'pointer', fontSize: 11, fontFamily: 'var(--font-mono)' }}
+                  >
+                    {example}
+                  </button>
+                ))}
+              </div>
+
+              {error && (
+                <div style={{ padding: '10px 12px', borderRadius: 10, background: 'var(--red-dim)', color: 'var(--red)', fontSize: 12 }}>
+                  {error}
                 </div>
+              )}
 
-                <div>
-                  <label style={{ display: 'block', marginBottom: 8, fontSize: 11, color: 'var(--text-muted)', fontFamily: 'var(--font-mono)', textTransform: 'uppercase', letterSpacing: '0.08em' }}>
-                    project path
-                  </label>
-                  <input
-                    value={workspace}
-                    onChange={event => setWorkspace(event.target.value)}
-                    placeholder="/Users/you/projects/my-app"
-                    style={{
-                      width: '100%',
-                      border: '1px solid var(--border)',
-                      borderRadius: 12,
-                      background: 'var(--bg-raised)',
-                      color: 'var(--text-primary)',
-                      padding: '11px 12px',
-                      fontSize: 13,
-                      outline: 'none',
-                      fontFamily: 'var(--font-mono)',
-                    }}
-                  />
-                  <p style={{ marginTop: 7, fontSize: 11, color: 'var(--text-muted)' }}>
-                    absolute path to the repository on your machine
-                  </p>
-                </div>
-
-                {error && (
-                  <div style={{ padding: '10px 12px', borderRadius: 10, background: 'var(--red-dim)', color: 'var(--red)', fontSize: 12 }}>
-                    {error}
-                  </div>
-                )}
-
+              <div style={{ display: 'flex', alignItems: isMobile ? 'stretch' : 'center', justifyContent: 'space-between', gap: 12, flexDirection: isMobile ? 'column' : 'row' }}>
+                <p style={{ fontSize: 12, color: 'var(--text-muted)', lineHeight: 1.7 }}>
+                  Writes and commands still ask for approval before execution.
+                </p>
                 <button
                   onClick={start}
                   style={{
-                    width: '100%',
-                      border: '1px solid rgba(255,255,255,0.06)',
-                      borderRadius: 12,
-                      background: 'linear-gradient(180deg, rgba(83, 131, 210, 0.92) 0%, rgba(70, 115, 191, 0.94) 100%)',
-                      color: '#f4f8ff',
-                      padding: '13px 14px',
+                    minWidth: isMobile ? '100%' : 220,
+                    border: '1px solid var(--border-bright)',
+                    borderRadius: 12,
+                    background: 'var(--accent)',
+                    color: 'var(--accent-contrast)',
+                    padding: '12px 14px',
                     cursor: 'pointer',
                     fontFamily: 'var(--font-mono)',
                     fontSize: 14,
@@ -395,30 +378,22 @@ export default function Home() {
                     alignItems: 'center',
                     justifyContent: 'center',
                     gap: 10,
-                    boxShadow: 'var(--shadow-md)',
                   }}
                 >
                   <span>{'>'}</span>
                   open workspace
                 </button>
-
-                <div style={{ padding: '11px 12px', borderRadius: 12, border: '1px solid var(--border)', background: 'var(--bg-raised)' }}>
-                  <p style={{ fontSize: 11, color: 'var(--text-muted)', fontFamily: 'var(--font-mono)' }}>notes</p>
-                  <p style={{ marginTop: 8, fontSize: 13, color: 'var(--text-primary)', opacity: 0.68, lineHeight: 1.7 }}>
-                    writes, patches, tests, and commands ask for approval before execution. sessions are persisted and can be reopened later.
-                  </p>
-                </div>
               </div>
             </div>
           </div>
         </div>
 
-        <p style={{ marginTop: 18, fontSize: 11, color: 'var(--text-muted)', textAlign: 'center', fontFamily: 'var(--font-mono)' }}>
+        <p style={{ marginTop: 16, fontSize: 11, color: 'var(--text-muted)', textAlign: 'center', fontFamily: 'var(--font-mono)' }}>
           powered by Groq · LLaMA 3.3 70B · local filesystem access
         </p>
 
         {sortedSessions.length > 0 && (
-          <section ref={menuRootRef} style={{ marginTop: 28, display: 'grid', gap: 18 }}>
+          <section ref={menuRootRef} style={{ marginTop: 24, display: 'grid', gap: 18 }}>
             <div style={{ display: 'grid', gap: 18 }}>
               {renderSessionSection('starred', starredSessions)}
               {renderSessionSection(starredSessions.length > 0 ? 'recent' : 'recent sessions', unstarredSessions)}
