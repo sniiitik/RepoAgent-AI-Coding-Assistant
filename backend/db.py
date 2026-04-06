@@ -169,23 +169,30 @@ def list_sessions(limit: int = 30) -> list[dict[str, Any]]:
             (limit,),
         ).fetchall()
     sessions = []
+    seen_workspaces: set[str] = set()
     for row in rows:
+        workspace = row["workspace"]
+        if workspace in seen_workspaces:
+            continue
+        seen_workspaces.add(workspace)
         turn_history = _decode_json(row["turn_history"], [])
         last_turn = turn_history[-1] if turn_history else {}
-        title = row["title_override"] or last_turn.get("goal") or Path(row["workspace"]).name or row["workspace"]
+        title = row["title_override"] or last_turn.get("goal") or Path(workspace).name or workspace
         sessions.append(
             {
                 "session_id": row["session_id"],
-                "workspace": row["workspace"],
+                "workspace": workspace,
                 "mode": row["mode"],
                 "busy": bool(row["busy"]),
                 "starred": bool(row["starred"]),
                 "title_override": row["title_override"],
                 "title": title[:80],
-                "last_updated": row["updated_at"],
+                "updated_at": row["updated_at"],
                 "turn_count": len(turn_history),
             }
         )
+        if len(sessions) >= limit:
+            break
     return sessions
 
 

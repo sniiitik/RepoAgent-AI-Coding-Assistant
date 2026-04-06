@@ -116,8 +116,8 @@ def _get_repo_overview(workspace: str) -> dict:
             "unstaged_lines": unstaged_lines[:25],
             "recent_commits": commits.stdout.splitlines()[:8],
             "rollback_options": [
-                {"id": "discard_worktree", "label": "Discard all uncommitted changes"},
-                {"id": "revert_commit", "label": "Revert a recent commit"},
+                {"id": "discard_worktree", "label": "Discard local uncommitted changes"},
+                {"id": "revert_commit", "label": "Undo a previous commit safely"},
             ],
         }
     except Exception:

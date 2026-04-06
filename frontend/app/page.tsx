@@ -1,13 +1,14 @@
 'use client'
+
 import { useEffect, useMemo, useRef, useState } from 'react'
 import { useRouter } from 'next/navigation'
 
 const EXAMPLES = [
-  'Can you write me a README?',
-  'Add type hints to all functions and improve variable naming',
-  'Write pytest tests for all public functions with edge cases',
-  'Add docstrings to every function and update the README',
-  'Explain the project structure and how the main pieces fit together',
+  'Explain the architecture',
+  'Write a README for this repo',
+  'Add tests for the backend',
+  'Find cleanup opportunities',
+  'Summarize how the app works',
 ]
 
 type RecentSession = {
@@ -100,9 +101,14 @@ export default function Home() {
   }, [])
 
   function start() {
-    if (!workspace.trim()) { setError('Please enter the path to your project'); return }
+    const normalizedWorkspace = workspace.trim()
+    if (!normalizedWorkspace) {
+      setError('Please enter the path to your project')
+      return
+    }
     setError('')
-    const params = new URLSearchParams({ workspace: workspace.trim() })
+    const existingSession = sortedSessions.find(session => session.workspace === normalizedWorkspace)
+    const params = new URLSearchParams(existingSession ? { session: existingSession.session_id } : { workspace: normalizedWorkspace })
     if (goal.trim()) params.set('goal', goal.trim())
     router.push(`/session?${params}`)
   }
@@ -165,37 +171,51 @@ export default function Home() {
     if (sessions.length === 0) return null
     return (
       <div style={{ display: 'grid', gap: 10 }}>
-        <p style={{ fontSize: 12, color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.06em', marginBottom: 2 }}>
+        <p style={{ fontSize: 11, color: 'var(--text-muted)', fontFamily: 'var(--font-mono)', textTransform: 'uppercase', letterSpacing: '0.08em' }}>
           {title}
         </p>
         {sessions.map(session => (
           <div
             key={session.session_id}
-            style={{ position: 'relative', textAlign: 'left', background: 'var(--bg-surface)', border: '1px solid var(--border)', borderRadius: 16, padding: isMobile ? '12px 14px' : '14px 16px', boxShadow: 'var(--shadow-md)' }}
+            style={{
+              position: 'relative',
+              border: '1px solid var(--border)',
+              borderRadius: 14,
+              background: 'linear-gradient(180deg, var(--bg-surface) 0%, color-mix(in srgb, var(--bg-surface) 84%, var(--bg-raised) 16%) 100%)',
+              boxShadow: 'var(--shadow-md)',
+              padding: isMobile ? '11px 12px' : '13px 14px',
+            }}
           >
-            <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', gap: 12 }}>
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', gap: 12 }}>
               <button
                 onClick={() => router.push(`/session?session=${session.session_id}`)}
-                style={{ flex: 1, textAlign: 'left', background: 'none', border: 'none', cursor: 'pointer', padding: 0, minWidth: 0 }}
+                style={{ flex: 1, minWidth: 0, background: 'none', border: 'none', textAlign: 'left', cursor: 'pointer', padding: 0 }}
               >
                 <div style={{ display: 'flex', alignItems: 'center', gap: 8, minWidth: 0 }}>
-                  {session.starred && (
-                    <span style={{ color: 'var(--accent)', display: 'inline-flex', alignItems: 'center', flexShrink: 0 }}>
-                      <svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor"><path d="m12 17.3-6.18 3.73 1.64-7.03L2 9.27l7.19-.61L12 2l2.81 6.66 7.19.61-5.46 4.73 1.64 7.03z" /></svg>
-                    </span>
-                  )}
-                  <p style={{ fontSize: 14, color: 'var(--text-primary)', fontWeight: 500, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{session.title || 'Untitled session'}</p>
+                  {session.starred && <span style={{ color: 'var(--accent)', fontSize: 12, flexShrink: 0 }}>*</span>}
+                  <p style={{ fontSize: 15, color: 'var(--text-primary)', fontFamily: 'var(--font-mono)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                    {session.title || 'untitled'}
+                  </p>
                 </div>
-                <p style={{ fontSize: 11, color: 'var(--text-secondary)', fontFamily: 'var(--font-mono)', marginTop: 6, wordBreak: 'break-all' }}>{session.workspace}</p>
-                <p style={{ fontSize: 11, color: 'var(--text-muted)', marginTop: 6 }}>Reopen chat</p>
+                <p style={{ marginTop: 7, fontSize: 12, color: 'var(--text-secondary)', fontFamily: 'var(--font-mono)', wordBreak: 'break-all' }}>
+                  {session.workspace}
+                </p>
+                <p style={{ marginTop: 7, fontSize: 11, color: 'var(--text-muted)' }}>
+                  reopen chat
+                </p>
               </button>
-              <div style={{ display: 'flex', alignItems: 'center', gap: 8, position: 'relative', flexShrink: 0 }}>
-                {!isMobile && <span style={{ fontSize: 11, fontFamily: 'var(--font-mono)', color: 'var(--accent)' }}>{session.turn_count} turn{session.turn_count === 1 ? '' : 's'}</span>}
+
+              <div style={{ display: 'flex', alignItems: 'center', gap: 10, position: 'relative', flexShrink: 0 }}>
+                {!isMobile && (
+                  <span style={{ fontSize: 11, color: 'var(--accent)', fontFamily: 'var(--font-mono)' }}>
+                    {session.turn_count} turn{session.turn_count === 1 ? '' : 's'}
+                  </span>
+                )}
                 <button
                   onClick={() => setOpenMenuId(current => (current === session.session_id ? null : session.session_id))}
-                  style={{ width: 28, height: 28, borderRadius: 999, border: 'none', background: 'transparent', color: 'var(--text-secondary)', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 0 }}
                   aria-label="Session options"
                   title="Session options"
+                  style={{ border: 'none', background: 'transparent', color: 'var(--text-secondary)', cursor: 'pointer', padding: 0, width: 24, height: 24 }}
                 >
                   <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor">
                     <circle cx="5" cy="12" r="2" />
@@ -203,50 +223,37 @@ export default function Home() {
                     <circle cx="19" cy="12" r="2" />
                   </svg>
                 </button>
+
                 {openMenuId === session.session_id && (
-                  <div style={{ position: 'absolute', top: 34, right: 0, width: 188, borderRadius: 18, border: '1px solid var(--border)', background: 'var(--bg-surface)', boxShadow: 'var(--shadow-lg)', padding: 8, zIndex: 10 }}>
+                  <div style={{ position: 'absolute', top: 30, right: 0, width: 188, borderRadius: 14, border: '1px solid var(--border)', background: 'var(--bg-surface)', boxShadow: 'var(--shadow-lg)', padding: 6, zIndex: 10 }}>
                     <button
                       onClick={() => toggleStar(session.session_id, session.starred)}
-                      style={{ width: '100%', textAlign: 'left', border: 'none', background: 'none', padding: '10px 12px', borderRadius: 12, cursor: 'pointer', color: 'var(--text-primary)', fontSize: 14, display: 'flex', alignItems: 'center', gap: 10 }}
+                      style={{ width: '100%', textAlign: 'left', border: 'none', background: 'transparent', color: 'var(--text-primary)', padding: '10px 11px', borderRadius: 10, cursor: 'pointer', fontFamily: 'var(--font-mono)', fontSize: 13 }}
                     >
-                      <span style={{ color: 'var(--accent)' }}>
-                        <svg width="16" height="16" viewBox="0 0 24 24" fill={session.starred ? 'currentColor' : 'none'} stroke="currentColor" strokeWidth="2">
-                          <path d="m12 17.3-6.18 3.73 1.64-7.03L2 9.27l7.19-.61L12 2l2.81 6.66 7.19.61-5.46 4.73 1.64 7.03z" />
-                        </svg>
-                      </span>
-                      {session.starred ? 'Unstar' : 'Star'}
+                      {session.starred ? 'unstar' : 'star'}
                     </button>
                     <button
                       onClick={() => openRename(session)}
-                      style={{ width: '100%', textAlign: 'left', border: 'none', background: 'none', padding: '10px 12px', borderRadius: 12, cursor: 'pointer', color: 'var(--text-primary)', fontSize: 14, display: 'flex', alignItems: 'center', gap: 10 }}
+                      style={{ width: '100%', textAlign: 'left', border: 'none', background: 'transparent', color: 'var(--text-primary)', padding: '10px 11px', borderRadius: 10, cursor: 'pointer', fontFamily: 'var(--font-mono)', fontSize: 13 }}
                     >
-                      <span>
-                        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-                          <path d="M12 20h9" />
-                          <path d="M16.5 3.5a2.1 2.1 0 0 1 3 3L7 19l-4 1 1-4Z" />
-                        </svg>
-                      </span>
-                      Rename
+                      rename
                     </button>
                     <div style={{ height: 1, background: 'var(--border)', margin: '4px 6px' }} />
                     <button
                       onClick={() => deleteSession(session.session_id)}
-                      style={{ width: '100%', textAlign: 'left', border: 'none', background: 'none', padding: '10px 12px', borderRadius: 12, cursor: 'pointer', color: 'var(--red)', fontSize: 14, display: 'flex', alignItems: 'center', gap: 10 }}
+                      style={{ width: '100%', textAlign: 'left', border: 'none', background: 'transparent', color: 'var(--red)', padding: '10px 11px', borderRadius: 10, cursor: 'pointer', fontFamily: 'var(--font-mono)', fontSize: 13 }}
                     >
-                      <span>
-                        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-                          <path d="M3 6h18" />
-                          <path d="M8 6V4h8v2" />
-                          <path d="M19 6l-1 14H6L5 6" />
-                        </svg>
-                      </span>
-                      Delete
+                      delete
                     </button>
                   </div>
                 )}
               </div>
             </div>
-            {isMobile && <p style={{ fontSize: 11, fontFamily: 'var(--font-mono)', color: 'var(--accent)', marginTop: 8 }}>{session.turn_count} turn{session.turn_count === 1 ? '' : 's'}</p>}
+            {isMobile && (
+              <p style={{ marginTop: 8, fontSize: 11, color: 'var(--accent)', fontFamily: 'var(--font-mono)' }}>
+                {session.turn_count} turn{session.turn_count === 1 ? '' : 's'}
+              </p>
+            )}
           </div>
         ))}
       </div>
@@ -254,126 +261,190 @@ export default function Home() {
   }
 
   return (
-    <div style={{ minHeight: '100vh', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: recentSessions.length > 0 ? 'flex-start' : 'center', padding: isMobile ? '28px 16px 40px' : '40px 24px' }}>
-
-      {/* Header */}
-      <div style={{ textAlign: 'center', marginBottom: 40 }}>
-        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 10, marginBottom: 12 }}>
-          <div style={{ width: 36, height: 36, borderRadius: 8, background: 'var(--accent-dim)', border: '1px solid var(--border-bright)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontFamily: 'var(--font-mono)', fontSize: 16, color: 'var(--accent)' }}>
-            {'</>'}
+    <div style={{ minHeight: '100vh', padding: isMobile ? '24px 14px 40px' : '36px 24px 56px' }}>
+      <div style={{ width: '100%', maxWidth: 980, margin: '0 auto' }}>
+        <div
+          style={{
+            border: '1px solid var(--border)',
+            borderRadius: 18,
+            background: 'var(--bg-surface)',
+            boxShadow: 'var(--shadow-lg)',
+            overflow: 'hidden',
+          }}
+        >
+          <div style={{ display: 'flex', alignItems: 'center', gap: 8, padding: '10px 14px', borderBottom: '1px solid var(--border)', background: 'var(--bg-raised)' }}>
+            <span style={{ width: 10, height: 10, borderRadius: 999, background: 'var(--red)', opacity: 0.8 }} />
+            <span style={{ width: 10, height: 10, borderRadius: 999, background: 'var(--orange)', opacity: 0.8 }} />
+            <span style={{ width: 10, height: 10, borderRadius: 999, background: 'var(--green)', opacity: 0.8 }} />
+            <span style={{ marginLeft: 8, fontSize: 12, color: 'var(--text-muted)', fontFamily: 'var(--font-mono)' }}>
+              repoagent
+            </span>
           </div>
-          <h1 style={{ fontFamily: 'var(--font-mono)', fontSize: 22, fontWeight: 500, letterSpacing: '-0.02em', color: 'var(--text-primary)' }}>
-            RepoAgent
-          </h1>
+
+          <div style={{ display: 'grid', gridTemplateColumns: isMobile ? '1fr' : 'minmax(0, 1.05fr) minmax(360px, 0.95fr)' }}>
+            <div style={{ padding: isMobile ? '20px 18px' : '28px 26px', borderRight: isMobile ? 'none' : '1px solid var(--border)' }}>
+              <p style={{ fontSize: 12, color: 'var(--accent)', fontFamily: 'var(--font-mono)', textTransform: 'uppercase', letterSpacing: '0.08em' }}>
+                $ repoagent start
+              </p>
+              <h1 style={{ marginTop: 18, fontSize: isMobile ? 32 : 48, lineHeight: 1.02, letterSpacing: '-0.05em', color: 'var(--text-primary)', fontWeight: 500 }}>
+                a terminal for talking to your codebase.
+              </h1>
+              <p style={{ marginTop: 16, fontSize: 15, color: 'var(--text-primary)', opacity: 0.72, lineHeight: 1.8, maxWidth: 560 }}>
+                Open a local project, ask what the repo does, request changes, review approvals, and keep working in the same session without losing context.
+              </p>
+
+              <div style={{ marginTop: 22, display: 'grid', gap: 10 }}>
+                <div style={{ padding: '11px 12px', borderRadius: 12, border: '1px solid var(--border)', background: 'var(--bg-raised)' }}>
+                  <p style={{ fontSize: 11, color: 'var(--text-muted)', fontFamily: 'var(--font-mono)' }}>capabilities</p>
+                  <p style={{ marginTop: 7, fontSize: 13, color: 'var(--text-primary)', opacity: 0.68, lineHeight: 1.7 }}>
+                    explain architecture • draft docs • edit files with approval • inspect git state • continue long-running repo chats
+                  </p>
+                </div>
+                <div style={{ padding: '11px 12px', borderRadius: 12, border: '1px solid var(--border)', background: 'var(--bg-raised)' }}>
+                  <p style={{ fontSize: 11, color: 'var(--text-muted)', fontFamily: 'var(--font-mono)' }}>sample prompts</p>
+                  <div style={{ marginTop: 8, display: 'flex', flexWrap: 'wrap', gap: 8 }}>
+                    {EXAMPLES.map(example => (
+                      <button
+                        key={example}
+                        onClick={() => setGoal(example)}
+                        style={{ border: '1px solid var(--border)', background: 'var(--bg-surface)', color: 'var(--text-secondary)', borderRadius: 999, padding: '7px 10px', cursor: 'pointer', fontSize: 11, fontFamily: 'var(--font-mono)', opacity: 0.9 }}
+                      >
+                        {example}
+                      </button>
+                    ))}
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            <div style={{ padding: isMobile ? '18px 18px' : '26px 22px' }}>
+              <p style={{ fontSize: 12, color: 'var(--text-muted)', fontFamily: 'var(--font-mono)', textTransform: 'uppercase', letterSpacing: '0.08em' }}>
+                session bootstrap
+              </p>
+
+              <div style={{ marginTop: 16, display: 'grid', gap: 16 }}>
+                <div>
+                  <label style={{ display: 'block', marginBottom: 8, fontSize: 11, color: 'var(--text-muted)', fontFamily: 'var(--font-mono)', textTransform: 'uppercase', letterSpacing: '0.08em' }}>
+                    first message
+                  </label>
+                  <textarea
+                    value={goal}
+                    onChange={event => setGoal(event.target.value)}
+                    placeholder="optional: explain the architecture, write a README, add tests..."
+                    rows={4}
+                    style={{
+                      width: '100%',
+                      border: '1px solid var(--border)',
+                      borderRadius: 12,
+                      background: 'var(--bg-raised)',
+                      color: 'var(--text-primary)',
+                      padding: '12px 13px',
+                      fontSize: 14,
+                      lineHeight: 1.6,
+                      outline: 'none',
+                      resize: 'vertical',
+                      fontFamily: 'var(--font-sans)',
+                    }}
+                  />
+                </div>
+
+                <div>
+                  <label style={{ display: 'block', marginBottom: 8, fontSize: 11, color: 'var(--text-muted)', fontFamily: 'var(--font-mono)', textTransform: 'uppercase', letterSpacing: '0.08em' }}>
+                    project path
+                  </label>
+                  <input
+                    value={workspace}
+                    onChange={event => setWorkspace(event.target.value)}
+                    placeholder="/Users/you/projects/my-app"
+                    style={{
+                      width: '100%',
+                      border: '1px solid var(--border)',
+                      borderRadius: 12,
+                      background: 'var(--bg-raised)',
+                      color: 'var(--text-primary)',
+                      padding: '11px 12px',
+                      fontSize: 13,
+                      outline: 'none',
+                      fontFamily: 'var(--font-mono)',
+                    }}
+                  />
+                  <p style={{ marginTop: 7, fontSize: 11, color: 'var(--text-muted)' }}>
+                    absolute path to the repository on your machine
+                  </p>
+                </div>
+
+                {error && (
+                  <div style={{ padding: '10px 12px', borderRadius: 10, background: 'var(--red-dim)', color: 'var(--red)', fontSize: 12 }}>
+                    {error}
+                  </div>
+                )}
+
+                <button
+                  onClick={start}
+                  style={{
+                    width: '100%',
+                      border: '1px solid rgba(255,255,255,0.06)',
+                      borderRadius: 12,
+                      background: 'linear-gradient(180deg, rgba(83, 131, 210, 0.92) 0%, rgba(70, 115, 191, 0.94) 100%)',
+                      color: '#f4f8ff',
+                      padding: '13px 14px',
+                    cursor: 'pointer',
+                    fontFamily: 'var(--font-mono)',
+                    fontSize: 14,
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    gap: 10,
+                    boxShadow: 'var(--shadow-md)',
+                  }}
+                >
+                  <span>{'>'}</span>
+                  open workspace
+                </button>
+
+                <div style={{ padding: '11px 12px', borderRadius: 12, border: '1px solid var(--border)', background: 'var(--bg-raised)' }}>
+                  <p style={{ fontSize: 11, color: 'var(--text-muted)', fontFamily: 'var(--font-mono)' }}>notes</p>
+                  <p style={{ marginTop: 8, fontSize: 13, color: 'var(--text-primary)', opacity: 0.68, lineHeight: 1.7 }}>
+                    writes, patches, tests, and commands ask for approval before execution. sessions are persisted and can be reopened later.
+                  </p>
+                </div>
+              </div>
+            </div>
+          </div>
         </div>
-        <p style={{ color: 'var(--text-secondary)', fontSize: 14 }}>
-          Autonomous AI agent that reads, understands, and improves your code
+
+        <p style={{ marginTop: 18, fontSize: 11, color: 'var(--text-muted)', textAlign: 'center', fontFamily: 'var(--font-mono)' }}>
+          powered by Groq · LLaMA 3.3 70B · local filesystem access
         </p>
+
+        {sortedSessions.length > 0 && (
+          <section ref={menuRootRef} style={{ marginTop: 28, display: 'grid', gap: 18 }}>
+            <div style={{ display: 'grid', gap: 18 }}>
+              {renderSessionSection('starred', starredSessions)}
+              {renderSessionSection(starredSessions.length > 0 ? 'recent' : 'recent sessions', unstarredSessions)}
+            </div>
+          </section>
+        )}
       </div>
-
-      {/* Card */}
-      <div style={{ width: '100%', maxWidth: 600, background: 'var(--bg-surface)', border: '1px solid var(--border)', borderRadius: 18, padding: 28, display: 'flex', flexDirection: 'column', gap: 22, boxShadow: 'var(--shadow-lg)', backdropFilter: 'blur(10px)' }}>
-
-        {/* Goal input */}
-        <div>
-          <label style={{ fontSize: 12, color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.06em', display: 'block', marginBottom: 8 }}>
-            First message
-          </label>
-          <textarea
-            value={goal}
-            onChange={e => setGoal(e.target.value)}
-            placeholder="Optional: ask for a README, refactor, tests, docs..."
-            rows={3}
-            style={{
-              width: '100%', background: 'var(--bg-raised)', border: '1px solid var(--border)',
-              borderRadius: 8, padding: '10px 12px', color: 'var(--text-primary)',
-              fontFamily: 'var(--font-sans)', fontSize: 14, resize: 'vertical',
-              outline: 'none', lineHeight: 1.6,
-            }}
-            onFocus={e => e.target.style.borderColor = 'var(--accent)'}
-            onBlur={e => e.target.style.borderColor = 'var(--border)'}
-          />
-          {/* Example chips */}
-          <div style={{ marginTop: 8, display: 'flex', gap: 6, flexWrap: 'wrap' }}>
-            {EXAMPLES.map(ex => (
-              <button key={ex} onClick={() => setGoal(ex)} style={{
-                fontSize: 11, padding: '3px 10px', borderRadius: 20,
-                background: 'var(--bg-raised)', border: '1px solid var(--border)',
-                color: 'var(--text-secondary)', cursor: 'pointer',
-              }}>
-                {ex.length > 50 ? ex.slice(0, 50) + '…' : ex}
-              </button>
-            ))}
-          </div>
-        </div>
-
-        {/* Workspace path */}
-        <div>
-          <label style={{ fontSize: 12, color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.06em', display: 'block', marginBottom: 8 }}>
-            Project path
-          </label>
-          <input
-            value={workspace}
-            onChange={e => setWorkspace(e.target.value)}
-            placeholder="/Users/you/projects/my-app"
-            style={{
-              width: '100%', background: 'var(--bg-raised)', border: '1px solid var(--border)',
-              borderRadius: 8, padding: '9px 12px', color: 'var(--text-primary)',
-              fontFamily: 'var(--font-mono)', fontSize: 13, outline: 'none',
-            }}
-            onFocus={e => e.target.style.borderColor = 'var(--accent)'}
-            onBlur={e => e.target.style.borderColor = 'var(--border)'}
-          />
-          <p style={{ fontSize: 11, color: 'var(--text-muted)', marginTop: 5 }}>
-            Absolute path to the project folder on your machine
-          </p>
-        </div>
-
-        {error && <p style={{ fontSize: 12, color: 'var(--red)', background: 'var(--red-dim)', padding: '8px 12px', borderRadius: 6 }}>{error}</p>}
-
-        <button onClick={start} style={{
-          padding: '11px', borderRadius: 8, background: 'var(--accent)',
-          border: 'none', color: 'var(--accent-contrast)', fontFamily: 'var(--font-mono)',
-          fontSize: 13, fontWeight: 500, cursor: 'pointer',
-          display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 8,
-          boxShadow: 'var(--shadow-md)',
-        }}>
-          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5"><polygon points="5 3 19 12 5 21 5 3" /></svg>
-          Open workspace
-        </button>
-      </div>
-
-      <p style={{ marginTop: 20, fontSize: 11, color: 'var(--text-muted)', textAlign: 'center' }}>
-        Powered by Groq · LLaMA 3.3 70B · Real file system access
-      </p>
-
-      {sortedSessions.length > 0 && (
-        <div ref={menuRootRef} style={{ width: '100%', maxWidth: 760, marginTop: 28 }}>
-          <div style={{ display: 'grid', gap: 18 }}>
-            {renderSessionSection('Starred', starredSessions)}
-            {renderSessionSection(starredSessions.length > 0 ? 'Recent' : 'Recent sessions', unstarredSessions)}
-          </div>
-        </div>
-      )}
 
       {renameSessionId && (
         <div style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.28)', display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 20, zIndex: 30 }}>
-          <div style={{ width: '100%', maxWidth: 420, borderRadius: 22, background: 'var(--bg-surface)', border: '1px solid var(--border)', boxShadow: 'var(--shadow-lg)', padding: 18 }}>
-            <p style={{ fontSize: 16, color: 'var(--text-primary)', fontWeight: 500 }}>Rename session</p>
-            <p style={{ fontSize: 12, color: 'var(--text-secondary)', marginTop: 4 }}>Give this chat a clearer label for your history.</p>
+          <div style={{ width: '100%', maxWidth: 420, borderRadius: 16, background: 'var(--bg-surface)', border: '1px solid var(--border)', boxShadow: 'var(--shadow-lg)', padding: 18 }}>
+            <p style={{ fontSize: 15, color: 'var(--text-primary)', fontFamily: 'var(--font-mono)' }}>rename session</p>
+            <p style={{ fontSize: 12, color: 'var(--text-secondary)', marginTop: 6 }}>give this chat a clearer terminal label</p>
             <input
               value={renameValue}
               onChange={event => setRenameValue(event.target.value)}
-              placeholder="Session name"
+              placeholder="session name"
               autoFocus
-              style={{ width: '100%', marginTop: 14, background: 'var(--bg-raised)', border: '1px solid var(--border)', borderRadius: 12, padding: '11px 12px', color: 'var(--text-primary)', fontSize: 14, outline: 'none' }}
+              style={{ width: '100%', marginTop: 14, background: 'var(--bg-raised)', border: '1px solid var(--border)', borderRadius: 10, padding: '11px 12px', color: 'var(--text-primary)', fontSize: 14, outline: 'none', fontFamily: 'var(--font-mono)' }}
             />
             <div style={{ display: 'flex', justifyContent: 'flex-end', gap: 10, marginTop: 16 }}>
-              <button onClick={() => setRenameSessionId(null)} style={{ padding: '10px 12px', borderRadius: 10, border: '1px solid var(--border)', background: 'var(--bg-surface)', color: 'var(--text-primary)', cursor: 'pointer' }}>
-                Cancel
+              <button onClick={() => setRenameSessionId(null)} style={{ padding: '10px 12px', borderRadius: 10, border: '1px solid var(--border)', background: 'var(--bg-surface)', color: 'var(--text-primary)', cursor: 'pointer', fontFamily: 'var(--font-mono)' }}>
+                cancel
               </button>
-              <button onClick={renameSession} style={{ padding: '10px 12px', borderRadius: 10, border: 'none', background: 'var(--accent)', color: 'var(--accent-contrast)', cursor: 'pointer' }}>
-                Save
+              <button onClick={renameSession} style={{ padding: '10px 12px', borderRadius: 10, border: 'none', background: 'var(--accent)', color: 'var(--accent-contrast)', cursor: 'pointer', fontFamily: 'var(--font-mono)' }}>
+                save
               </button>
             </div>
           </div>

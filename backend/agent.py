@@ -90,11 +90,12 @@ class PendingToolCall:
     arguments: str
 
 
-def _run_tool(name: str, args: dict[str, Any]) -> str:
+def _run_tool(name: str, args: dict[str, Any] | None) -> str:
     fn = TOOL_MAP.get(name)
     if not fn:
         return json.dumps({"error": f"Unknown tool: {name}"})
-    result = fn(**args)
+    safe_args = args if isinstance(args, dict) else {}
+    result = fn(**safe_args)
     return json.dumps(result, indent=2)
 
 
@@ -126,13 +127,14 @@ def _is_small_talk(goal: str) -> bool:
 
 def _classify_intent(goal: str, requested_mode: str | None) -> str:
     normalized = _normalize_text(goal)
+    tokens = set(re.findall(r"\b[a-z0-9']+\b", normalized))
     if _is_small_talk(goal):
         return "small_talk"
     if normalized in {"thanks", "thank you", "ok", "okay", "cool", "nice"}:
         return "small_talk"
     if normalized in AMBIGUOUS_PATTERNS:
         return "clarify"
-    if len(normalized.split()) <= 4 and any(token in normalized for token in ["this", "that", "it", "help", "check", "fix"]):
+    if len(normalized.split()) <= 4 and tokens.intersection({"this", "that", "it", "help", "check", "fix"}):
         return "clarify"
     return _infer_mode(goal, requested_mode)
 
@@ -368,7 +370,8 @@ def _tool_signature(tool_name: str, args: dict[str, Any]) -> str:
 
 def _load_tool_args(tool_call: PendingToolCall) -> dict[str, Any]:
     try:
-        return json.loads(tool_call.arguments)
+        parsed = json.loads(tool_call.arguments)
+        return parsed if isinstance(parsed, dict) else {}
     except json.JSONDecodeError:
         return {}
 
@@ -447,6 +450,17 @@ def _build_patch_preview(workspace: str, path: str, edits: list[dict[str, Any]])
             old_text = edit.get("old_text", "")
             new_text = edit.get("new_text", "")
             replace_all = bool(edit.get("replace_all", False))
+            occurrences = updated.count(old_text) if old_text else 0
+            if not old_text:
+                return {"type": "patch", "path": path, "error": "Patch preview could not be generated because an edit is missing old_text."}
+            if occurrences == 0:
+                return {"type": "patch", "path": path, "error": "Patch preview could not find the target text in the current file contents."}
+            if occurrences > 1 and not replace_all:
+                return {
+                    "type": "patch",
+                    "path": path,
+                    "error": "Patch preview matched multiple locations. The edit needs more specific target text or replace_all=true.",
+                }
             updated = updated.replace(old_text, new_text, -1 if replace_all else 1)
         diff_lines = list(
             difflib.unified_diff(
@@ -460,7 +474,7 @@ def _build_patch_preview(workspace: str, path: str, edits: list[dict[str, Any]])
         return {
             "type": "patch",
             "path": path,
-            "diff_preview": "\n".join(diff_lines[:120]),
+            "diff_preview": "\n".join(diff_lines[:120]) or "No line-level diff preview was generated for this patch.",
             "edits": edits,
         }
     except Exception as error:
