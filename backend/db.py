@@ -189,6 +189,23 @@ def list_sessions(limit: int = 30) -> list[dict[str, Any]]:
     return sessions
 
 
+def find_latest_session_by_workspace(workspace: str) -> dict[str, Any] | None:
+    with _connect() as conn:
+        row = conn.execute(
+            """
+            SELECT *
+            FROM sessions
+            WHERE workspace = ?
+            ORDER BY updated_at DESC
+            LIMIT 1
+            """,
+            (workspace,),
+        ).fetchone()
+    if not row:
+        return None
+    return _row_to_session(row)
+
+
 def update_session_metadata(session_id: str, *, starred: bool | None = None, title: str | None = None) -> dict[str, Any] | None:
     session = get_session(session_id)
     if not session:

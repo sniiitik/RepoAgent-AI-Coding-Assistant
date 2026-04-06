@@ -14,6 +14,7 @@ from db import (
     clear_approvals,
     create_session as create_session_record,
     delete_session as delete_session_record,
+    find_latest_session_by_workspace,
     get_approval,
     get_session as get_session_record,
     init_db,
@@ -231,6 +232,15 @@ def create_session(payload: CreateSessionRequest):
         raise HTTPException(400, "mode must be refactor, test, or document")
     if not os.path.isdir(payload.workspace):
         raise HTTPException(400, f"Workspace '{payload.workspace}' is not a valid directory")
+
+    existing_session = find_latest_session_by_workspace(payload.workspace)
+    if existing_session:
+        return SessionResponse(
+            session_id=existing_session["session_id"],
+            workspace=existing_session["workspace"],
+            mode=existing_session["mode"],
+            busy=existing_session["busy"],
+        )
 
     session = {
         "session_id": str(uuid4()),
