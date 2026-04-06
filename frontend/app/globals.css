@@ -15,6 +15,8 @@
   --accent: #58a6ff;
   --accent-contrast: #07111f;
   --accent-dim: rgba(88, 166, 255, 0.1);
+  --action-button-bg: rgba(255, 255, 255, 0.92);
+  --action-button-fg: #101418;
   --green: #3fb950;
   --green-dim: rgba(63, 185, 80, 0.12);
   --orange: #d29922;
@@ -49,6 +51,8 @@ html[data-theme='light'] {
   --accent: #2f6fed;
   --accent-contrast: #f8fbff;
   --accent-dim: rgba(47, 111, 237, 0.11);
+  --action-button-bg: #101418;
+  --action-button-fg: #f7fafc;
   --green: #1f8f78;
   --green-dim: rgba(31, 143, 120, 0.12);
   --orange: #c8742f;

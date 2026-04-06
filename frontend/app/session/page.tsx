@@ -271,7 +271,6 @@ function ChatTurnCard({
   return (
     <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
       <div style={{ alignSelf: 'flex-end', maxWidth: '80%', padding: '12px 14px', borderRadius: 12, background: 'var(--accent-dim)', border: '1px solid var(--border-bright)' }}>
-        <p style={{ fontSize: 11, fontFamily: 'var(--font-mono)', color: 'var(--accent)', textTransform: 'uppercase', letterSpacing: '0.06em', marginBottom: 6 }}>You</p>
         <p style={{ fontSize: 14, color: 'var(--text-primary)', lineHeight: 1.6, whiteSpace: 'pre-wrap' }}>{turn.goal}</p>
       </div>
 
@@ -659,7 +658,7 @@ function SessionContent() {
           </div>
 
           <div style={{ position: 'sticky', bottom: 0, padding: isMobile ? '12px 14px 16px' : '16px 24px 22px', borderTop: '1px solid var(--border)', background: 'var(--shell-gradient)', backdropFilter: 'blur(14px)' }}>
-            <div style={{ display: 'flex', gap: 10, alignItems: 'flex-end', padding: '10px 12px', borderRadius: 24, border: '1px solid var(--border)', background: 'var(--shell-bg)', boxShadow: 'var(--shadow-lg)' }}>
+            <div style={{ display: 'flex', gap: 10, alignItems: 'center', padding: '10px 12px', borderRadius: 24, border: '1px solid var(--border)', background: 'var(--shell-bg)', boxShadow: 'var(--shadow-lg)' }}>
               <textarea
                 value={input}
                 onChange={event => setInput(event.target.value)}
@@ -676,12 +675,12 @@ function SessionContent() {
                   width: 42,
                   height: 42,
                   flexShrink: 0,
-                  borderRadius: 14,
+                  borderRadius: 999,
                   border: '1px solid var(--border-bright)',
-                  background: status === 'running' ? 'var(--accent-dim)' : 'var(--accent)',
-                  color: status === 'running' ? 'var(--text-muted)' : 'var(--accent-contrast)',
-                  cursor: status === 'running' ? 'default' : 'pointer',
-                  boxShadow: status === 'running' ? 'none' : 'var(--shadow-md)',
+                  background: input.trim() && status !== 'running' && status !== 'booting' && sessionId ? 'var(--action-button-bg)' : 'var(--bg-surface)',
+                  color: input.trim() && status !== 'running' && status !== 'booting' && sessionId ? 'var(--action-button-fg)' : 'var(--text-muted)',
+                  cursor: status === 'running' || status === 'booting' || !input.trim() || !sessionId ? 'not-allowed' : 'pointer',
+                  boxShadow: 'none',
                   display: 'flex',
                   alignItems: 'center',
                   justifyContent: 'center',

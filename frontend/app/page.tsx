@@ -260,6 +260,8 @@ export default function Home() {
     )
   }
 
+  const canStart = workspace.trim().length > 0
+
   return (
     <div style={{ minHeight: '100vh', padding: isMobile ? '24px 14px 40px' : '36px 24px 56px' }}>
       <div style={{ width: '100%', maxWidth: 920, margin: '0 auto' }}>
@@ -362,27 +364,44 @@ export default function Home() {
                 <p style={{ fontSize: 12, color: 'var(--text-muted)', lineHeight: 1.7 }}>
                   Writes and commands still ask for approval before execution.
                 </p>
-                <button
-                  onClick={start}
+                <div
                   style={{
-                    minWidth: isMobile ? '100%' : 220,
-                    border: '1px solid var(--border-bright)',
-                    borderRadius: 12,
-                    background: 'var(--accent)',
-                    color: 'var(--accent-contrast)',
-                    padding: '12px 14px',
-                    cursor: 'pointer',
+                    minWidth: isMobile ? '100%' : 240,
+                    color: canStart ? 'var(--text-primary)' : 'var(--text-muted)',
                     fontFamily: 'var(--font-mono)',
                     fontSize: 14,
                     display: 'flex',
                     alignItems: 'center',
-                    justifyContent: 'center',
-                    gap: 10,
+                    justifyContent: isMobile ? 'center' : 'flex-start',
+                    gap: 12,
+                    opacity: canStart ? 1 : 0.8,
                   }}
                 >
-                  <span>{'>'}</span>
-                  open workspace
-                </button>
+                  <button
+                    onClick={start}
+                    disabled={!canStart}
+                    style={{
+                      width: 42,
+                      height: 42,
+                      borderRadius: 999,
+                      display: 'flex',
+                      alignItems: 'center',
+                      justifyContent: 'center',
+                      background: canStart ? 'var(--action-button-bg)' : 'var(--bg-surface)',
+                      color: canStart ? 'var(--action-button-fg)' : 'var(--text-muted)',
+                      flexShrink: 0,
+                      border: '1px solid var(--border-bright)',
+                      cursor: canStart ? 'pointer' : 'not-allowed',
+                      padding: 0,
+                    }}
+                  >
+                    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round">
+                      <path d="M12 19V5" />
+                      <path d="m6 11 6-6 6 6" />
+                    </svg>
+                  </button>
+                  <span>open workspace</span>
+                </div>
               </div>
             </div>
           </div>
