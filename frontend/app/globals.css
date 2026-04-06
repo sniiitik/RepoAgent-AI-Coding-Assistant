@@ -34,31 +34,34 @@
 }
 
 html[data-theme='light'] {
-  --bg: #f6f1e8;
-  --bg-page: radial-gradient(circle at top, rgba(223, 161, 110, 0.16), transparent 35%), linear-gradient(180deg, #f8f3eb 0%, #f3ede3 100%);
-  --bg-surface: rgba(255, 252, 247, 0.92);
-  --bg-raised: #f1e9dd;
-  --bg-hover: #ece2d3;
-  --shell-bg: rgba(255, 251, 245, 0.88);
-  --shell-gradient: linear-gradient(180deg, rgba(247, 241, 233, 0.9) 0%, rgba(244, 236, 226, 0.96) 100%);
-  --border: rgba(110, 78, 46, 0.14);
-  --border-bright: rgba(110, 78, 46, 0.22);
-  --accent: #cc6f3d;
-  --accent-contrast: #fffaf5;
-  --accent-dim: rgba(204, 111, 61, 0.1);
-  --green: #2f8f5b;
-  --green-dim: rgba(47, 143, 91, 0.12);
-  --orange: #b66a2b;
-  --orange-dim: rgba(182, 106, 43, 0.12);
-  --red: #c35a45;
-  --red-dim: rgba(195, 90, 69, 0.12);
-  --purple: #8d6bb8;
-  --purple-dim: rgba(141, 107, 184, 0.12);
-  --text-primary: #2f2419;
-  --text-secondary: #6f6255;
-  --text-muted: #9a8e82;
-  --shadow-lg: 0 20px 50px rgba(123, 101, 78, 0.12);
-  --shadow-md: 0 12px 28px rgba(123, 101, 78, 0.1);
+  --bg: #eef3f8;
+  --bg-page:
+    radial-gradient(circle at top left, rgba(58, 123, 213, 0.16), transparent 30%),
+    radial-gradient(circle at top right, rgba(35, 162, 150, 0.12), transparent 28%),
+    linear-gradient(180deg, #f6f9fc 0%, #edf2f8 48%, #e8eef5 100%);
+  --bg-surface: rgba(255, 255, 255, 0.84);
+  --bg-raised: #f2f6fb;
+  --bg-hover: #e9eff7;
+  --shell-bg: rgba(248, 251, 255, 0.88);
+  --shell-gradient: linear-gradient(180deg, rgba(246, 250, 255, 0.94) 0%, rgba(236, 242, 249, 0.98) 100%);
+  --border: rgba(42, 61, 87, 0.12);
+  --border-bright: rgba(42, 61, 87, 0.2);
+  --accent: #2f6fed;
+  --accent-contrast: #f8fbff;
+  --accent-dim: rgba(47, 111, 237, 0.11);
+  --green: #1f8f78;
+  --green-dim: rgba(31, 143, 120, 0.12);
+  --orange: #c8742f;
+  --orange-dim: rgba(200, 116, 47, 0.12);
+  --red: #c64d5d;
+  --red-dim: rgba(198, 77, 93, 0.12);
+  --purple: #6f67d8;
+  --purple-dim: rgba(111, 103, 216, 0.12);
+  --text-primary: #182536;
+  --text-secondary: #576579;
+  --text-muted: #90a0b4;
+  --shadow-lg: 0 24px 54px rgba(44, 64, 92, 0.12);
+  --shadow-md: 0 14px 32px rgba(44, 64, 92, 0.08);
 }
 
 * {
