@@ -25,6 +25,14 @@ MAX_SUMMARIES = 8
 MAX_FACTS = 10
 MAX_TOOL_REPETITIONS = 3
 APPROVAL_POLL_INTERVAL = 0.25
+TEST_COMMANDS = {
+    "pytest",
+    "python -m pytest",
+    "python3 -m pytest",
+    "npm test",
+    "npm run test",
+    "node --test",
+}
 
 BASE_SYSTEM_PROMPT = """You are CodeWeave, an expert software engineer working inside a local repository.
 You are in an ongoing conversation with the user about the same workspace.
@@ -383,6 +391,30 @@ def _tool_signature(tool_name: str, args: dict[str, Any]) -> str:
     return f"{tool_name}:{json.dumps(args, sort_keys=True)[:240]}"
 
 
+def _is_regenerable_patch_error(tool_name: str, result_data: dict[str, Any]) -> bool:
+    if tool_name != "create_file_patch":
+        return False
+    error_text = str(result_data.get("error", "")).lower()
+    tokens = (
+        "missing non-empty old_text",
+        "missing edits or old_text/new_text fields",
+        "could not find target text",
+        "matched multiple locations",
+    )
+    return any(token in error_text for token in tokens)
+
+
+def _patch_recovery_message(result_data: dict[str, Any]) -> str:
+    error_text = str(result_data.get("error", "The previous patch failed."))
+    return (
+        f"Your previous patch request failed: {error_text}\n"
+        "Do not repeat the same invalid create_file_patch call.\n"
+        "Read the file again if needed and then either:\n"
+        "1. use create_file_patch with exact old_text copied from the file, or\n"
+        "2. use write_file with the full updated file contents if a patch is too brittle."
+    )
+
+
 def _load_tool_args(tool_call: PendingToolCall) -> dict[str, Any]:
     try:
         parsed = json.loads(tool_call.arguments)
@@ -503,6 +535,35 @@ def _command_severity(command: str) -> str:
     if lowered.startswith(RISKY_COMMAND_PREFIXES):
         return "risky"
     return "safe"
+
+
+def _normalize_command(command: str) -> str:
+    return " ".join(str(command).strip().lower().split())
+
+
+def _command_policy_error(command: str) -> str | None:
+    normalized = _normalize_command(command)
+    if not normalized:
+        return "The command is empty."
+    blocked_prefixes = (
+        "npm install",
+        "npm add",
+        "npm update",
+        "npm remove",
+        "npm uninstall",
+        "pnpm install",
+        "pnpm add",
+        "yarn install",
+        "yarn add",
+        "pip install",
+        "python -m pip install",
+        "python3 -m pip install",
+    )
+    if any(normalized.startswith(prefix) for prefix in blocked_prefixes):
+        return "Dependency installation is blocked. Do not install packages unless the user explicitly asks for it."
+    if normalized in TEST_COMMANDS:
+        return "Use `run_tests` instead of `run_command` for test execution."
+    return None
 
 
 def _approval_severity(tool_name: str, args: dict[str, Any]) -> str:
@@ -633,6 +694,7 @@ async def run_agent(
     auto_fix_attempted = False
     last_test_failure: str | None = None
     tool_history: list[str] = []
+    seen_commands: set[str] = set()
 
     yield {"type": "thought", "content": f"Working on: {goal}"}
 
@@ -749,8 +811,9 @@ async def run_agent(
                         "role": "user",
                         "content": (
                             "Review the git diff above before finalizing. "
-                            "If anything is incomplete or risky, use more tools to fix it. "
-                            "If it looks good, summarize the result clearly."
+                            "Only make another edit if the diff shows an obvious correctness problem, broken syntax, or a clear mismatch with the user's request. "
+                            "Do not invent extra product/content changes, renames, or stylistic tweaks on your own. "
+                            "If the diff already satisfies the request, summarize the result clearly."
                         ),
                     }
                 )
@@ -827,6 +890,28 @@ async def run_agent(
                     batch_actions.extend(_build_approval_actions(workspace, current_tc.name, current_args))
                     tool_index += 1
 
+                invalid_actions = [action for action in batch_actions if action.get("error")]
+                if invalid_actions:
+                    recovery_error = invalid_actions[0].get("error") or "The previous patch proposal was invalid."
+                    for invalid_tc, invalid_args in batch_calls:
+                        matching_error = next((action.get("error") for action in batch_actions if action.get("path") == invalid_args.get("path") and action.get("error")), None)
+                        error_message = matching_error or f"Invalid {invalid_tc.name} request"
+                        invalid_result = {"error": error_message}
+                        yield {"type": "tool_result", "tool": invalid_tc.name, "result": invalid_result}
+                        conversation_messages.append(
+                            {
+                                "role": "tool",
+                                "tool_call_id": invalid_tc.id,
+                                "content": json.dumps(invalid_result, indent=2),
+                            }
+                        )
+                    user_attention.append("A proposed file edit was invalid and needs to be regenerated")
+                    for invalid_tc, invalid_args in batch_calls:
+                        invalid_signature = _tool_signature(invalid_tc.name, invalid_args)
+                        tool_history = [entry for entry in tool_history if entry != invalid_signature]
+                    conversation_messages.append({"role": "user", "content": _patch_recovery_message({"error": recovery_error})})
+                    continue
+
                 approval_id = str(uuid4())
                 now = _utc_now()
                 approval_args = {"operations": batch_payload}
@@ -891,9 +976,54 @@ async def run_agent(
                         yield {"type": "file_changed", **change}
                     yield {"type": "tool_result", "tool": approved_tc.name, "result": result_data}
                     conversation_messages.append({"role": "tool", "tool_call_id": approved_tc.id, "content": result_str})
+                    if _is_regenerable_patch_error(approved_tc.name, result_data):
+                        user_attention.append("A proposed file edit was invalid and needs to be regenerated")
+                        tool_history = [entry for entry in tool_history if entry != _tool_signature(approved_tc.name, approved_args)]
+                        conversation_messages.append({"role": "user", "content": _patch_recovery_message(result_data)})
+                        break
                 continue
 
             if tool_name in APPROVAL_REQUIRED_TOOLS:
+                if tool_name in {"run_command", "run_tests"}:
+                    command = args.get("command", "pytest" if tool_name == "run_tests" else "")
+                    normalized_command = _normalize_command(command)
+                    if normalized_command in seen_commands:
+                        duplicate_result = {"error": f"Duplicate command request skipped: `{normalized_command}`"}
+                        yield {"type": "tool_result", "tool": tool_name, "result": duplicate_result}
+                        conversation_messages.append(
+                            {
+                                "role": "tool",
+                                "tool_call_id": tc.id,
+                                "content": json.dumps(duplicate_result, indent=2),
+                            }
+                        )
+                        tool_index += 1
+                        continue
+                    if tool_name == "run_command":
+                        policy_error = _command_policy_error(str(command))
+                        if policy_error:
+                            blocked_result = {"error": policy_error}
+                            yield {"type": "tool_result", "tool": tool_name, "result": blocked_result}
+                            conversation_messages.append(
+                                {
+                                    "role": "tool",
+                                    "tool_call_id": tc.id,
+                                    "content": json.dumps(blocked_result, indent=2),
+                                }
+                            )
+                            conversation_messages.append(
+                                {
+                                    "role": "user",
+                                    "content": (
+                                        f"The proposed command `{normalized_command}` is not allowed here: {policy_error} "
+                                        "Choose a safer alternative and continue without asking for the blocked command again."
+                                    ),
+                                }
+                            )
+                            tool_index += 1
+                            continue
+                    seen_commands.add(normalized_command)
+
                 approval_id = str(uuid4())
                 now = _utc_now()
                 session_state.setdefault("approvals", {})[approval_id] = {
@@ -956,6 +1086,11 @@ async def run_agent(
 
             yield {"type": "tool_result", "tool": tool_name, "result": result_data}
             conversation_messages.append({"role": "tool", "tool_call_id": tc.id, "content": result_str})
+            if _is_regenerable_patch_error(tool_name, result_data):
+                user_attention.append("A proposed file edit was invalid and needs to be regenerated")
+                tool_history = [entry for entry in tool_history if entry != signature]
+                conversation_messages.append({"role": "user", "content": _patch_recovery_message(result_data)})
+                break
             tool_index += 1
 
     final_message = f"Reached max iterations ({MAX_ITERATIONS}). Stopping."

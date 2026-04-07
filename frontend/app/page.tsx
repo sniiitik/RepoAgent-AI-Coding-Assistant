@@ -31,6 +31,7 @@ export default function Home() {
   const [openMenuId, setOpenMenuId] = useState<string | null>(null)
   const [renameSessionId, setRenameSessionId] = useState<string | null>(null)
   const [renameValue, setRenameValue] = useState('')
+  const [deleteSessionTarget, setDeleteSessionTarget] = useState<RecentSession | null>(null)
   const [isMobile, setIsMobile] = useState(false)
   const menuRootRef = useRef<HTMLDivElement>(null)
 
@@ -89,6 +90,7 @@ export default function Home() {
       if (event.key === 'Escape') {
         setOpenMenuId(null)
         setRenameSessionId(null)
+        setDeleteSessionTarget(null)
       }
     }
 
@@ -167,6 +169,16 @@ export default function Home() {
     setOpenMenuId(null)
   }
 
+  function confirmDelete(session: RecentSession) {
+    setDeleteSessionTarget(session)
+    setOpenMenuId(null)
+  }
+
+  function projectName(path: string) {
+    const parts = path.split('/').filter(Boolean)
+    return parts[parts.length - 1] || path
+  }
+
   function renderSessionSection(title: string, sessions: RecentSession[]) {
     if (sessions.length === 0) return null
     return (
@@ -197,10 +209,10 @@ export default function Home() {
                     {session.title || 'untitled'}
                   </p>
                 </div>
-                <p style={{ marginTop: 7, fontSize: 12, color: 'var(--text-secondary)', fontFamily: 'var(--font-mono)', wordBreak: 'break-all' }}>
-                  {session.workspace}
+                <p style={{ marginTop: 6, fontSize: 12, color: 'var(--text-secondary)', fontFamily: 'var(--font-mono)' }}>
+                  {projectName(session.workspace)}
                 </p>
-                <p style={{ marginTop: 7, fontSize: 11, color: 'var(--text-muted)' }}>
+                <p style={{ marginTop: 5, fontSize: 11, color: 'var(--text-muted)' }}>
                   reopen chat
                 </p>
               </button>
@@ -225,7 +237,7 @@ export default function Home() {
                 </button>
 
                 {openMenuId === session.session_id && (
-                  <div style={{ position: 'absolute', top: 30, right: 0, width: 188, borderRadius: 14, border: '1px solid var(--border)', background: 'var(--bg-surface)', boxShadow: 'var(--shadow-lg)', padding: 6, zIndex: 10 }}>
+                  <div style={{ position: 'absolute', bottom: 30, right: 0, width: 188, borderRadius: 14, border: '1px solid var(--border)', background: 'var(--bg-surface)', boxShadow: 'var(--shadow-lg)', padding: 6, zIndex: 10 }}>
                     <button
                       onClick={() => toggleStar(session.session_id, session.starred)}
                       style={{ width: '100%', textAlign: 'left', border: 'none', background: 'transparent', color: 'var(--text-primary)', padding: '10px 11px', borderRadius: 10, cursor: 'pointer', fontFamily: 'var(--font-mono)', fontSize: 13 }}
@@ -240,7 +252,7 @@ export default function Home() {
                     </button>
                     <div style={{ height: 1, background: 'var(--border)', margin: '4px 6px' }} />
                     <button
-                      onClick={() => deleteSession(session.session_id)}
+                      onClick={() => confirmDelete(session)}
                       style={{ width: '100%', textAlign: 'left', border: 'none', background: 'transparent', color: 'var(--red)', padding: '10px 11px', borderRadius: 10, cursor: 'pointer', fontFamily: 'var(--font-mono)', fontSize: 13 }}
                     >
                       delete
@@ -263,7 +275,7 @@ export default function Home() {
   const canStart = workspace.trim().length > 0
 
   return (
-    <div style={{ minHeight: '100vh', padding: isMobile ? '24px 14px 40px' : '36px 24px 56px' }}>
+    <div style={{ minHeight: '100vh', padding: isMobile ? '24px 14px 40px' : '36px 24px 56px', display: 'flex', alignItems: sortedSessions.length > 0 ? 'flex-start' : 'center' }}>
       <div style={{ width: '100%', maxWidth: 920, margin: '0 auto' }}>
         <div
           style={{
@@ -283,18 +295,18 @@ export default function Home() {
             </span>
           </div>
 
-          <div style={{ padding: isMobile ? '22px 16px 18px' : '28px 28px 24px' }}>
+          <div style={{ padding: isMobile ? '20px 16px 16px' : '26px 28px 22px' }}>
             <p style={{ fontSize: 12, color: 'var(--accent)', fontFamily: 'var(--font-mono)', textTransform: 'uppercase', letterSpacing: '0.08em' }}>
-                $ codeweave start
+              $ codeweave start
             </p>
-            <h1 style={{ marginTop: 16, fontSize: isMobile ? 32 : 44, lineHeight: 1.04, letterSpacing: '-0.05em', color: 'var(--text-primary)', fontWeight: 500, maxWidth: 620 }}>
+            <h1 style={{ marginTop: 14, fontSize: isMobile ? 32 : 44, lineHeight: 1.04, letterSpacing: '-0.05em', color: 'var(--text-primary)', fontWeight: 500, maxWidth: 620 }}>
               talk to your codebase.
             </h1>
-            <p style={{ marginTop: 12, fontSize: 14, color: 'var(--text-secondary)', lineHeight: 1.8, maxWidth: 620 }}>
+            <p style={{ marginTop: 10, fontSize: 14, color: 'var(--text-secondary)', lineHeight: 1.75, maxWidth: 620 }}>
               Open a local repo, ask what it does, request a change, and keep the same session alive.
             </p>
 
-            <div style={{ marginTop: 22, display: 'grid', gap: 14 }}>
+            <div style={{ marginTop: 20, display: 'grid', gap: 12 }}>
               <div>
                 <label style={{ display: 'block', marginBottom: 8, fontSize: 11, color: 'var(--text-muted)', fontFamily: 'var(--font-mono)', textTransform: 'uppercase', letterSpacing: '0.08em' }}>
                   project path
@@ -360,20 +372,20 @@ export default function Home() {
                 </div>
               )}
 
-              <div style={{ display: 'flex', alignItems: isMobile ? 'stretch' : 'center', justifyContent: 'space-between', gap: 12, flexDirection: isMobile ? 'column' : 'row' }}>
+              <div style={{ display: 'flex', alignItems: isMobile ? 'stretch' : 'center', justifyContent: 'space-between', gap: 10, flexDirection: isMobile ? 'column' : 'row' }}>
                 <p style={{ fontSize: 12, color: 'var(--text-muted)', lineHeight: 1.7 }}>
                   Writes and commands still ask for approval before execution.
                 </p>
                 <div
                   style={{
                     minWidth: isMobile ? '100%' : 240,
-                    color: canStart ? 'var(--text-primary)' : 'var(--text-muted)',
+                    color: canStart ? 'var(--text-secondary)' : 'var(--text-muted)',
                     fontFamily: 'var(--font-mono)',
                     fontSize: 14,
                     display: 'flex',
                     alignItems: 'center',
                     justifyContent: isMobile ? 'center' : 'flex-start',
-                    gap: 12,
+                    gap: 10,
                     opacity: canStart ? 1 : 0.8,
                   }}
                 >
@@ -400,7 +412,7 @@ export default function Home() {
                       <path d="m6 11 6-6 6 6" />
                     </svg>
                   </button>
-                  <span>open workspace</span>
+                  <span style={{ color: canStart ? 'var(--text-primary)' : 'var(--text-muted)' }}>open workspace</span>
                 </div>
               </div>
             </div>
@@ -439,6 +451,43 @@ export default function Home() {
               </button>
               <button onClick={renameSession} style={{ padding: '10px 12px', borderRadius: 10, border: 'none', background: 'var(--accent)', color: 'var(--accent-contrast)', cursor: 'pointer', fontFamily: 'var(--font-mono)' }}>
                 save
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {deleteSessionTarget && (
+        <div
+          onClick={() => setDeleteSessionTarget(null)}
+          style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.34)', display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 20, zIndex: 31 }}
+        >
+          <div
+            onClick={event => event.stopPropagation()}
+            style={{ width: '100%', maxWidth: 460, borderRadius: 18, background: 'var(--bg-surface)', border: '1px solid var(--border)', boxShadow: 'var(--shadow-lg)', padding: '22px 22px 18px' }}
+          >
+            <p style={{ fontSize: 18, color: 'var(--text-primary)', fontWeight: 600 }}>
+              Delete chat
+            </p>
+            <p style={{ marginTop: 10, fontSize: 14, color: 'var(--text-secondary)', lineHeight: 1.7 }}>
+              Are you sure you want to delete <span style={{ color: 'var(--text-primary)', fontFamily: 'var(--font-mono)' }}>{deleteSessionTarget.title || projectName(deleteSessionTarget.workspace)}</span>?
+            </p>
+            <div style={{ display: 'flex', justifyContent: 'flex-end', gap: 10, marginTop: 22 }}>
+              <button
+                onClick={() => setDeleteSessionTarget(null)}
+                style={{ padding: '10px 14px', borderRadius: 12, border: '1px solid var(--border)', background: 'transparent', color: 'var(--text-primary)', cursor: 'pointer', fontFamily: 'var(--font-mono)', fontSize: 13 }}
+              >
+                Cancel
+              </button>
+              <button
+                onClick={async () => {
+                  const sessionId = deleteSessionTarget.session_id
+                  setDeleteSessionTarget(null)
+                  await deleteSession(sessionId)
+                }}
+                style={{ padding: '10px 14px', borderRadius: 12, border: 'none', background: 'var(--red)', color: '#fff7f7', cursor: 'pointer', fontFamily: 'var(--font-mono)', fontSize: 13 }}
+              >
+                Delete
               </button>
             </div>
           </div>

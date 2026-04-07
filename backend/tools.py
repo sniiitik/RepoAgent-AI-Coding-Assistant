@@ -106,7 +106,13 @@ def write_file(path: str, content: str) -> dict[str, Any]:
         return {"error": str(e)}
 
 
-def create_file_patch(path: str, edits: list[dict[str, Any]]) -> dict[str, Any]:
+def create_file_patch(
+    path: str,
+    edits: list[dict[str, Any]] | None = None,
+    old_text: str | None = None,
+    new_text: str = "",
+    replace_all: bool = False,
+) -> dict[str, Any]:
     """Apply targeted search/replace edits to a file."""
     try:
         p = _safe(path)
@@ -117,7 +123,19 @@ def create_file_patch(path: str, edits: list[dict[str, Any]]) -> dict[str, Any]:
         updated = original
         applied = []
 
-        for index, edit in enumerate(edits, start=1):
+        normalized_edits = edits
+        if normalized_edits is None:
+            if old_text is None:
+                return {"error": "Patch request is missing edits or old_text/new_text fields"}
+            normalized_edits = [
+                {
+                    "old_text": old_text,
+                    "new_text": new_text,
+                    "replace_all": replace_all,
+                }
+            ]
+
+        for index, edit in enumerate(normalized_edits, start=1):
             old_text = edit.get("old_text")
             new_text = edit.get("new_text", "")
             replace_all = bool(edit.get("replace_all", False))
