@@ -279,13 +279,13 @@ export default function Home() {
             <span style={{ width: 10, height: 10, borderRadius: 999, background: 'var(--orange)', opacity: 0.8 }} />
             <span style={{ width: 10, height: 10, borderRadius: 999, background: 'var(--green)', opacity: 0.8 }} />
             <span style={{ marginLeft: 8, fontSize: 12, color: 'var(--text-muted)', fontFamily: 'var(--font-mono)' }}>
-              repoagent
+              CodeWeave
             </span>
           </div>
 
           <div style={{ padding: isMobile ? '22px 16px 18px' : '28px 28px 24px' }}>
             <p style={{ fontSize: 12, color: 'var(--accent)', fontFamily: 'var(--font-mono)', textTransform: 'uppercase', letterSpacing: '0.08em' }}>
-                $ repoagent start
+                $ codeweave start
             </p>
             <h1 style={{ marginTop: 16, fontSize: isMobile ? 32 : 44, lineHeight: 1.04, letterSpacing: '-0.05em', color: 'var(--text-primary)', fontWeight: 500, maxWidth: 620 }}>
               talk to your codebase.

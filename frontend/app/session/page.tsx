@@ -276,7 +276,7 @@ function ChatTurnCard({
 
       <div style={{ maxWidth: '90%', padding: '14px 16px', borderRadius: 12, background: 'var(--bg-surface)', border: '1px solid var(--border)' }}>
         <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 10 }}>
-          <p style={{ fontSize: 12, color: 'var(--text-muted)' }}>RepoAgent</p>
+          <p style={{ fontSize: 12, color: 'var(--text-muted)' }}>CodeWeave</p>
           <span style={{ fontSize: 12, color: statusColor }}>
             {turn.status === 'running' ? 'Running...' : turn.status === 'done' ? `Done in ${turn.iterations} steps` : 'Error'}
           </span>
@@ -286,7 +286,7 @@ function ChatTurnCard({
           {showGeneratingBubble && (
             <div style={{ display: 'flex', gap: 10, alignItems: 'center', padding: '6px 0' }}>
               <div className="spinner" />
-              <p style={{ fontSize: 13, color: 'var(--text-secondary)' }}>RepoAgent is thinking...</p>
+              <p style={{ fontSize: 13, color: 'var(--text-secondary)' }}>CodeWeave is thinking...</p>
             </div>
           )}
           {turn.events.map((event, index) => (
@@ -299,7 +299,7 @@ function ChatTurnCard({
           ))}
           {turn.status === 'done' && turn.summary && (
             <div style={{ marginTop: 6, padding: '12px 14px', borderRadius: 8, background: 'var(--green-dim)', border: '1px solid rgba(63,185,80,0.2)' }}>
-              <p style={{ fontSize: 13, color: 'var(--green)', lineHeight: 1.6 }}>{turn.summary}</p>
+              <p style={{ fontSize: 13, color: 'var(--green)', lineHeight: 1.6, whiteSpace: 'pre-wrap' }}>{turn.summary}</p>
             </div>
           )}
         </div>
