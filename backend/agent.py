@@ -26,7 +26,7 @@ MAX_FACTS = 10
 MAX_TOOL_REPETITIONS = 3
 APPROVAL_POLL_INTERVAL = 0.25
 
-BASE_SYSTEM_PROMPT = """You are RepoAgent, an expert software engineer working inside a local repository.
+BASE_SYSTEM_PROMPT = """You are CodeWeave, an expert software engineer working inside a local repository.
 You are in an ongoing conversation with the user about the same workspace.
 
 Core behavior:
@@ -121,7 +121,7 @@ def _is_small_talk(goal: str) -> bool:
     if normalized in SMALL_TALK_PATTERNS:
         return True
 
-    short_greeting_pattern = re.compile(r"^(hi|hello|hey|yo)( there| repoagent| agent)?[!.?]*$")
+    short_greeting_pattern = re.compile(r"^(hi|hello|hey|yo)( there| codeweave| repoagent| agent)?[!.?]*$")
     return bool(short_greeting_pattern.match(normalized))
 
 
@@ -141,9 +141,15 @@ def _classify_intent(goal: str, requested_mode: str | None) -> str:
     return _infer_mode(goal, requested_mode)
 
 
+def _workspace_label(workspace: str) -> str:
+    label = Path(workspace).name.strip()
+    return label or workspace
+
+
 def _small_talk_response(workspace: str) -> str:
+    label = _workspace_label(workspace)
     return (
-        f"Hi! I'm ready to help with `{workspace}`.\n\n"
+        f"Hi! I'm ready to help with `{label}`.\n\n"
         "You can ask me to inspect the codebase, explain the architecture, write a README, "
         "modify files, or add tests. Tell me what you want to work on and I'll jump in."
     )
@@ -154,8 +160,9 @@ def _gratitude_response() -> str:
 
 
 def _clarifying_question(goal: str, workspace: str) -> str:
+    label = _workspace_label(workspace)
     return (
-        f"I can help with `{workspace}`, but I need a bit more direction first.\n\n"
+        f"I can help with `{label}`, but I need a bit more direction first.\n\n"
         f"You said: `{goal}`\n\n"
         "Tell me what you want me to do, for example:\n"
         "- explain the architecture\n"
@@ -362,6 +369,8 @@ def _format_final_answer(
     verified_text = "; ".join(verifications) if verifications else "No automated verification was run."
     attention_text = "; ".join(user_attention) if user_attention else "Nothing specific needs user attention."
     summary = assistant_content.strip() or "Task complete."
+    if all(marker in summary for marker in ("What changed:", "What was verified:", "What still needs attention:")):
+        return summary
     return (
         f"{summary}\n\n"
         f"What changed: {what_changed}\n"
