@@ -252,14 +252,6 @@ If needed, define:
 NEXT_PUBLIC_BACKEND_URL=http://localhost:8000
 ```
 
-## Development Notes
-
-- Backend sessions are currently in-memory only.
-- `backend/requirements.txt` is present but currently empty; dependencies are installed manually.
-- The backend uses permissive CORS during development.
-- Tool execution is intentionally constrained to a selected workspace root.
-- `run_command` currently allows only a small whitelist of commands.
-
 ## Safety Model
 
 RepoAgent is designed to reduce the risk of unsafe file access:
@@ -270,15 +262,6 @@ RepoAgent is designed to reduce the risk of unsafe file access:
 - Shell command execution is whitelisted
 
 This is a practical local-development safeguard, not a hardened security boundary.
-
-## Current Limitations
-
-- Sessions are not persisted to a database
-- A backend restart clears active conversations
-- Concurrency is limited by per-session `busy` state
-- There is no authentication layer yet
-- Command execution is intentionally narrow
-- Backend dependency installation is not yet codified in `requirements.txt`
 
 
 ## Why RepoAgent Exists
