@@ -1,237 +1,163 @@
 # RepoAgent
 
+> A full-stack agentic coding assistant that connects to any local repository, reasons about the codebase through real tool calls, and streams every thought and file change live — built for transparent, iterative, human-in-the-loop AI development workflows.
 
-> AI-powered coding assistant for local repositories with streaming tool execution, diffs, and persistent chat sessions.
+![Stack](https://img.shields.io/badge/Next.js-16-black?style=flat-square&logo=next.js)
+![Stack](https://img.shields.io/badge/React-19-61DAFB?style=flat-square&logo=react)
+![Stack](https://img.shields.io/badge/FastAPI-Python-009688?style=flat-square&logo=fastapi)
+![Stack](https://img.shields.io/badge/Groq-LLaMA_3.3_70B-blue?style=flat-square)
+![Stack](https://img.shields.io/badge/Streaming-SSE-orange?style=flat-square)
 
-🎥 **[Watch the Demo Video](https://github.com/sniiitik/RepoAgent-AI-Coding-Assistant/releases/latest)**
+
+🎥 **[Watch the Demo](https://github.com/sniiitik/RepoAgent-AI-Coding-Assistant/releases/latest)**
+
+---
+
+## What makes this different
+
+Most AI coding tools are one-shot: you send a prompt, get a response, done. RepoAgent is built around **persistent sessions** — you connect a repository once and keep iterating in the same conversation:
+
+```
+"Write a README for this project"
+→ agent reads all files, writes README.md, shows diff
+
+"Now make it shorter"  
+→ agent reads the README it just wrote, edits it
+
+"Add a setup section with the actual install commands"
+→ agent reads requirements.txt, infers the right commands, updates README
+```
+
+Every step — the agent's reasoning, each tool call, every file change — streams live to the UI. Nothing is hidden.
+
+---
 
 ## Screenshots
 
-### Home Screen
-
+### Home — connect any local project
 ![Home Screen](docs/home-screen.png)
 
-### Streaming Agent Execution
-
+### Live agent execution with streaming tool calls
 ![Streaming Agent](docs/streaming-agent.png)
 
-### Agent Approval & File Changes
-
+### File diffs with approve / reject
 ![Agent Approval](docs/agent-approval.png)
 
-
-RepoAgent is a full-stack AI coding assistant for local repositories. It lets you connect a project folder, chat continuously with an agent about that codebase, stream intermediate reasoning and tool activity, and apply file changes directly inside the selected workspace.
-
-The project combines a FastAPI backend, a Groq-powered agent loop, and a Next.js frontend that presents the interaction as an ongoing coding chat rather than a one-shot task runner.
+---
 
 ## Features
 
-- Continuous chat sessions tied to a single workspace
-- Streaming agent responses over Server-Sent Events
-- Safe, workspace-scoped file tools for listing, reading, writing, searching, and running limited commands
-- Visual file change tracking with inline diffs
-- Light and dark themes with a Claude-inspired light mode
-- Session-based frontend UX for iterative requests like "Write me a README", "Now make it shorter", or "Add tests for that module too"
+- **Persistent chat sessions** — full conversation history per workspace, iterate with follow-ups
+- **Real tool execution** — agent actually reads and writes files, doesn't just suggest changes
+- **Live SSE streaming** — every thought, tool call, and file change appears as it happens
+- **Human-in-the-loop** — approve or reject each file change before it's applied
+- **Inline diffs** — before/after view for every file the agent modifies
+- **Workspace sandbox** — agent is strictly confined to the chosen project directory
+- **Light + dark themes** — Claude-inspired light mode, GitHub-inspired dark mode
+- **Malformed tool-call recovery** — graceful handling when the model emits malformed tool syntax
 
-## Demo Workflow
-
-1. Enter the absolute path to a local project.
-2. Optionally send an initial prompt.
-3. Open a session and continue chatting with the same repository context.
-4. Watch the agent stream thoughts, tool calls, results, and file diffs.
-5. Iterate on the result with follow-up prompts in the same conversation.
-
-## Tech Stack
-
-### Frontend
-
-- Next.js 16
-- React 19
-- TypeScript
-- CSS variables plus global styling in `frontend/app/globals.css`
-
-### Backend
-
-- FastAPI
-- Python
-- Groq API with `llama-3.3-70b-versatile`
-- SSE streaming responses
+---
 
 ## Architecture
 
-RepoAgent is split into two main applications:
-
-- `frontend/`
-  - Handles the chat UI, theme switching, session flow, streamed event rendering, and diff display.
-- `backend/`
-  - Manages sessions, validates workspaces, runs the agent loop, executes safe repository tools, and streams events back to the UI.
-
-### High-Level Flow
-
-```text
-User -> Next.js UI -> FastAPI session endpoint -> Agent loop -> Tool execution -> SSE stream -> UI updates
+```
+┌─────────────────────────────────────────────────────────────────┐
+│                        AGENTIC LOOP                              │
+│                                                                  │
+│  User message → messages[] → Groq LLM → tool_calls?             │
+│                    ↑                         │                   │
+│                    └──── tool results ───────┘                   │
+│                    (loop until finish_reason=stop)               │
+└─────────────────────────────────────────────────────────────────┘
+                             │
+                   SSE event stream
+                             │
+┌─────────────────────────────────────────────────────────────────┐
+│                      NEXT.JS FRONTEND                            │
+│                                                                  │
+│  thought events  │  tool_call badges  │  file_changed diffs     │
+│  fixed composer  │  session history   │  light/dark theme       │
+└─────────────────────────────────────────────────────────────────┘
 ```
 
-### Backend Architecture
+### High-level request flow
 
-#### `backend/main.py`
-
-Responsible for:
-
-- Creating chat sessions
-- Returning existing session metadata
-- Running agent turns for a session
-- Streaming events back to the frontend
-
-Current sessions are stored in memory in a process-local dictionary:
-
-- Each session tracks:
-  - `session_id`
-  - `workspace`
-  - `mode`
-  - `busy`
-  - `messages`
-  - timestamps
-
-This keeps the implementation simple, but sessions are not persistent across server restarts.
-
-#### `backend/agent.py`
-
-Implements the core agent loop:
-
-- Builds conversation context for the current workspace
-- Sends the accumulated chat history to Groq
-- Allows tool calling through declared tool schemas
-- Streams:
-  - thoughts
-  - tool calls
-  - tool results
-  - file changes
-  - completion/error events
-
-The agent also includes a recovery path for malformed tool-call generations returned by the model, which helps reduce failures when the model emits tool syntax outside the structured tool response format.
-
-#### `backend/tools.py`
-
-Defines the local tools the model can use:
-
-- `list_files`
-- `read_file`
-- `write_file`
-- `search_code`
-- `run_command`
-
-These tools are restricted to the currently selected workspace through a path safety layer, preventing the agent from escaping the repository root.
-
-#### `backend/models.py`
-
-Contains the Pydantic models used for:
-
-- session creation
-- session runs
-- session responses
-- streamed event payloads
-
-### Frontend Architecture
-
-#### `frontend/app/page.tsx`
-
-Landing page for:
-
-- entering a workspace path
-- optionally sending the first message
-- starting a new RepoAgent session
-
-#### `frontend/app/session/page.tsx`
-
-Main chat workspace for:
-
-- loading or creating a session
-- sending follow-up prompts
-- rendering streamed events per turn
-- showing diffs and changed files
-- keeping the composer fixed while chat content scrolls
-
-
-## Repository Structure
-
-```text
-RepoAgent/
-├── backend/
-│   ├── agent.py
-│   ├── main.py
-│   ├── models.py
-│   ├── requirements.txt
-│   └── tools.py
-├── frontend/
-│   ├── app/
-│   │   ├── globals.css
-│   │   ├── layout.tsx
-│   │   ├── page.tsx
-│   │   └── session/page.tsx
-│   ├── components/
-│   │   ├── DiffViewer.tsx
-│   │   ├── ThemeProvider.tsx
-│   │   └── ThemeToggle.tsx
-│   ├── package.json
-│   └── ...
-└── README.md
+```
+User → Next.js UI → POST /api/sessions/{id}/run → Agent loop → Tool execution → SSE stream → UI
 ```
 
-## API Overview
+### Session model
 
-### `POST /api/sessions`
+Each session tracks:
 
-Creates a new session for a workspace.
-
-Request body:
-
-```json
-{
-  "workspace": "/absolute/path/to/project",
-  "mode": "refactor"
-}
-```
-
-Response:
-
-```json
+```python
 {
   "session_id": "uuid",
   "workspace": "/absolute/path/to/project",
-  "mode": "refactor",
-  "busy": false
+  "mode": "refactor | test | document",
+  "busy": false,
+  "messages": [],   # full conversation history
+  "created_at": "...",
+  "updated_at": "..."
 }
 ```
 
-### `GET /api/sessions/{session_id}`
+Sessions persist in memory — a restart clears them. See [Known Limitations](#known-limitations).
 
-Fetches metadata for an existing session.
+---
 
-### `POST /api/sessions/{session_id}/run`
+## Tech Stack
 
-Runs one prompt turn inside an existing session and streams events via SSE.
+| Layer | Technology | Why |
+|---|---|---|
+| Frontend | Next.js 16 + React 19 + TypeScript | App Router, fast iteration, type safety |
+| Styling | CSS variables + global stylesheet | Custom themes without component library overhead |
+| Backend | FastAPI (Python) | Async-native, auto Swagger docs at `/docs` |
+| LLM | Groq API — LLaMA 3.3 70B | Free tier, ~300 tok/s, native tool-use |
+| Streaming | Server-Sent Events | Unidirectional, works over plain HTTP, auto-reconnect |
+| Validation | Pydantic v2 | Typed schemas for all requests and SSE event payloads |
 
-Request body:
+---
 
-```json
-{
-  "goal": "Write a professional README for this project",
-  "mode": "document"
-}
+## Project Structure
+
+```
+RepoAgent/
+├── backend/
+│   ├── main.py        # 3 endpoints: create session, get session, run turn
+│   ├── agent.py       # Agentic loop — Groq + tool calls + SSE streaming
+│   ├── tools.py       # 5 workspace-sandboxed tools + Groq tool schemas
+│   ├── models.py      # Pydantic schemas for all events and API contracts
+│   └── requirements.txt
+│
+└── frontend/
+    ├── app/
+    │   ├── page.tsx           # Workspace input + session creation
+    │   └── session/page.tsx   # Chat UI + streamed event rendering
+    └── components/
+        ├── DiffViewer.tsx     # Before/after inline diff display
+        ├── ThemeProvider.tsx  # Light/dark context
+        └── ThemeToggle.tsx    # Theme switcher
 ```
 
+---
 
-## Prerequisites
+## Getting Started
+
+### Prerequisites
 
 - Python 3.10+
 - Node.js 18+
-- npm
-- A Groq API key
+- A free [Groq API key](https://console.groq.com) — no credit card required
 
-## Backend Setup
+### 1. Clone
 
-From the repository root:
+```bash
+git clone https://github.com/sniiitik/RepoAgent-AI-Coding-Assistant.git
+cd RepoAgent-AI-Coding-Assistant
+```
+
+### 2. Backend
 
 ```bash
 cd backend
@@ -240,67 +166,146 @@ source .venv/bin/activate
 pip install fastapi uvicorn python-dotenv groq pydantic
 ```
 
-Create a `.env` file inside `backend/`:
-
-```env
-GROQ_API_KEY=your_groq_api_key_here
-```
-
-Run the backend:
-
 ```bash
+echo "GROQ_API_KEY=your_key_here" > .env
 uvicorn main:app --reload --port 8000
+# Swagger UI → http://localhost:8000/docs
 ```
 
-## Frontend Setup
+### 3. Frontend
 
 ```bash
-cd frontend
+cd ../frontend
 npm install
 npm run dev
+# UI → http://localhost:3000
 ```
 
-By default, the frontend expects the backend at:
+### 4. Use it
 
-```env
-http://localhost:8000
+1. Open `http://localhost:3000`
+2. Enter the **absolute path** to any local project
+3. Type an initial goal or leave it blank and start chatting
+4. Watch the agent stream its work live
+5. Approve or reject each file change before it's applied
+6. Continue with follow-up messages in the same session
+
+---
+
+## API Reference
+
+### `POST /api/sessions`
+Create a new session for a workspace.
+
+```json
+// Request
+{ "workspace": "/absolute/path/to/project", "mode": "refactor" }
+
+// Response
+{ "session_id": "uuid", "workspace": "...", "mode": "refactor", "busy": false }
 ```
 
-If needed, define:
+### `GET /api/sessions/{session_id}`
+Fetch metadata for an existing session.
 
-```env
-NEXT_PUBLIC_BACKEND_URL=http://localhost:8000
+### `POST /api/sessions/{session_id}/run`
+Run one turn and stream SSE events.
+
+```json
+// Request
+{ "goal": "Write a professional README", "mode": "document" }
 ```
 
-## Safety Model
+**SSE event types streamed back:**
 
-RepoAgent is designed to reduce the risk of unsafe file access:
+| Event type | Payload | Description |
+|---|---|---|
+| `thought` | `{ content }` | Agent reasoning text |
+| `tool_call` | `{ tool, args }` | Tool the agent is about to call |
+| `tool_result` | `{ tool, result }` | What the tool returned |
+| `file_changed` | `{ path, original, new_content }` | A file was written |
+| `done` | `{ content, changed_files[], iterations }` | Turn complete |
+| `error` | `{ content }` | Something went wrong |
 
-- Every file path is resolved relative to the chosen workspace
-- Paths that escape the workspace root are rejected
-- File reads are size-limited
-- Shell command execution is whitelisted
+---
 
-This is a practical local-development safeguard, not a hardened security boundary.
+## Tools
 
+| Tool | Description |
+|---|---|
+| `list_files` | List files matching a glob — always the agent's first call |
+| `read_file` | Read file content (size-limited to 100KB) |
+| `write_file` | Create or overwrite a file, returns original for diff |
+| `search_code` | Grep-style search across all files in workspace |
+| `run_command` | Whitelisted commands only: `pytest`, `ls`, `grep`, `find`, `cat`, `head`, `tail` |
+
+### Safety sandbox
+
+Every path operation resolves relative to the workspace root and checks for escape attempts:
+
+```python
+def _safe(path: str) -> Path:
+    resolved = (_WORKSPACE / path).resolve()
+    if not str(resolved).startswith(str(_WORKSPACE)):
+        raise PermissionError(f"Path '{path}' escapes workspace")
+    return resolved
+```
+
+A path like `../../etc/passwd` is rejected before it touches the filesystem. This is a practical development safeguard, not a hardened security boundary.
+
+---
+
+## Design Decisions
+
+### Why persistent sessions instead of one-shot runs?
+
+Single-prompt agents are limited by context — you can't say "now make it shorter" because the agent doesn't remember what it just wrote. Persistent sessions accumulate the full `messages[]` array across turns, so the agent always has complete context of everything it's done in this workspace. This is the architectural choice that enables iterative workflows.
+
+### Why SSE instead of WebSockets?
+
+SSE is unidirectional (server → client) which is all an agent stream needs. It works over plain HTTP/1.1, requires no handshake, reconnects automatically on drop, and is trivially consumed by `fetch()` in the browser. WebSockets add bidirectional complexity that this use case doesn't justify.
+
+### Why LLaMA 3.3 70B via Groq instead of GPT-4 or Claude?
+
+Free tier with no credit card, ~300 tokens/second inference (fast enough to feel live in the UI), and native tool-use support. The LLM sits behind a single `client.chat.completions.create()` call — swapping to Claude Sonnet or GPT-4o in production is a one-line config change.
+
+### Why a custom agent loop instead of LangChain?
+
+The loop in `agent.py` is ~80 lines and fully transparent. Every iteration is visible and debuggable. LangChain abstractions make sense at scale but add significant overhead for a project where understanding the loop matters as much as running it. For an open-source project, readable code is a feature.
+
+### Why malformed tool-call recovery?
+
+LLaMA 3.3 70B occasionally emits tool call syntax in plain text rather than the structured format — especially on complex multi-step reasoning. The recovery path in `agent.py` parses these cases rather than crashing, which meaningfully improves reliability on longer sessions.
+
+---
+
+## Known Limitations
+
+- **Sessions are in-memory** — a backend restart clears all session history. Production would use PostgreSQL or Supabase.
+- **No parallelism** — tool calls execute sequentially. Parallel reads would speed up large codebase analysis.
+- **100KB file limit** — files over 100KB are skipped. A chunked reading strategy would handle large files.
+- **Single user** — no auth, no multi-tenancy. Anyone with the URL can create sessions.
+- **Local only** — workspace must be a path on the machine running the backend. GitHub URL support would require a clone step.
+
+---
 
 ## Why RepoAgent Exists
 
-Most repository agents are optimized for single prompts or hidden execution. RepoAgent is built around a more transparent workflow:
+Most repository agents optimise for single prompts or hidden execution. RepoAgent is built around a more transparent workflow: connect a real local project, watch the agent work, keep the conversation going, and inspect the actual file changes before they're applied.
 
-- connect a real local project
-- watch the agent work
-- keep the conversation going
-- inspect the actual file changes
+That makes it useful both as a coding assistant and as a learning interface for understanding how agentic systems actually behave in practice.
 
-That makes it useful both as a coding assistant and as a learning/debugging interface for agentic development workflows.
+---
 
 ## Contributing
 
-If you want to improve RepoAgent:
+- Keep all backend tools workspace-safe — no path escapes
+- Preserve the SSE event contract between backend and frontend
+- Verify UI changes in both light and dark themes
+- Keep the chat flow iterative — single-shot UX patterns are a regression
 
-- keep backend tools workspace-safe
-- preserve the streaming event contract between backend and frontend
-- verify UI changes in both light and dark themes
-- keep the chat flow iterative and easy to follow
+---
 
+## License
+
+MIT
