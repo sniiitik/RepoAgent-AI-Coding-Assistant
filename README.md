@@ -1,5 +1,25 @@
 # RepoAgent
 
+
+> AI-powered coding assistant for local repositories with streaming tool execution, diffs, and persistent chat sessions.
+
+🎥 **[Watch the Demo Video](https://github.com/sniiitik/RepoAgent-AI-Coding-Assistant/releases/latest)**
+
+## Screenshots
+
+### Home Screen
+
+![Home Screen](docs/home-screen.png)
+
+### Streaming Agent Execution
+
+![Streaming Agent](docs/streaming-agent.png)
+
+### Agent Approval & File Changes
+
+![Agent Approval](docs/agent-approval.png)
+
+
 RepoAgent is a full-stack AI coding assistant for local repositories. It lets you connect a project folder, chat continuously with an agent about that codebase, stream intermediate reasoning and tool activity, and apply file changes directly inside the selected workspace.
 
 The project combines a FastAPI backend, a Groq-powered agent loop, and a Next.js frontend that presents the interaction as an ongoing coding chat rather than a one-shot task runner.
